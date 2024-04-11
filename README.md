@@ -15,7 +15,7 @@ Shi L, Herbert P, Chen C, Jiawen Z, (2024). rdborrow: An R package for Causal In
 
 ## How to cite the package
 
-Shi L, Herbert P, Chen C, Jiawen Z, (2024). rdborrow: An R package for Causal Inference Incorporating External Controls in Randomized Trials with Longitudinal Outcomes. R package version 0.0.0.1, [](https://github.com/pathwayrf/rdborrow/). 
+Shi L, Herbert P, Chen C, Jiawen Z, (2024). rdborrow: An R package for Causal Inference Incorporating External Controls in Randomized Trials with Longitudinal Outcomes. R package version 0.0.0.1, https://github.com/pathwayrf/rdborrow/. 
 
 ```
 @Manual{,
