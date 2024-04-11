@@ -2,3 +2,12 @@
 .Rhistory
 .RData
 .Ruserdata
+build.Rmd
+Aug2023
+EC_primaryanalysis_original
+Study
+Xover_original
+mimic_true_data.Rmd
+user-design.Rmd
+replication.Rmd
+inst/vignetteRMD/old_analysis_files

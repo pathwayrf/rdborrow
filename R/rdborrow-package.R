@@ -9,7 +9,7 @@
 #' @aliases rdborrow-package rdborrow
 #'
 #' @section Authors:
-#' The following authors contribute to the development and maintainance of the package:
+#' The following authors contribute to the development and maintenance of the package:
 #' 
 #' Lei Shi, University of California, Berkeley
 #' 
