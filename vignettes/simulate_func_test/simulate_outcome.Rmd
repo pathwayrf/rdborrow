@@ -1,0 +1,140 @@
+---
+title: "simulate_outcome"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{simulate_outcome}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup, message=FALSE, warning=FALSE, include=FALSE}
+# knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+library(rdborrow)
+set.seed(2023)
+```
+
+In this document we discuss how to simulate outcomes for experimentation. We will discuss two parts: 
+
+1. Simulate outcomes for primary analysis; 
+
+2. Simulate outcomes under OLE settings;
+
+
+
+
+## 1. Simulate outcomes for primary analysis
+We use the following generic setup to facilitate the discussion: 
+
+1. Number of patients: $N = 300$, with $N_1 = 200$ in internal study and $N_0 = 100$ in external study;
+2. Covariates: 2 categorical variables ($\text{p_cat} = 2$) and 2 continuous variables ($\text{p_cont} = 2$), from a discretized multivarite gaussian model;
+3. Treatment allocation: for internal group $S = 1$ , treatment $A$ is randomized following $\text{Bernoulli}(2/3)$; for external group $S = 0$, all units are control units, i.e. with $A = 0$;
+4. Followup time: two follow up time points;
+5. Potential outcomes models: at each time point, the outcomes generated from linear models. 
+
+
+### Simulate $X$ for $S = 0$ and $S = 1$
+
+The first step is to simulate covariate $X$ for both the internal group $S = 0$ and the external group $S = 1$. Two groups are allowed to have different sample sizes, but their columns should represent the same set of variables. 
+
+```{r}
+# separate is better: could be another S
+# TODO: checking the same number of dimension
+
+# S = 1
+X_int = simulate_X_dct_mvnorm(n = 200,   # number of units
+                              p = 4,    # dimension of variables
+                              mu = rep(1, 4),  # population mean of multivariate normal
+                              sig = diag(4),   # population covariance matrix of mv normal
+                              cat_cols = c(1, 2), # which columns are categorical
+                              cat_prob = list(c(0.3, 0.7), c(0.4, 0.6)) # the pdf of categorical variables 
+                              )
+
+# S = 0
+X_ext = simulate_X_dct_mvnorm(n = 100,   # number of units
+                              p = 4,    # dimension of variables
+                              mu = rep(0, 4),  # population mean of multivariate normal
+                              sig = diag(4),   # population covariance matrix of mv normal
+                              cat_cols = c(1, 2), # which columns are categorical
+                              cat_prob = list(c(0.3, 0.7), c(0.4, 0.6)) # the pdf of categorical variables 
+                              )
+```
+
+Display the first 10 rows of the covariate matrices:
+```{r}
+head(X_int, 10)
+head(X_ext, 10)
+```
+
+### Simulate trial
+```{r}
+# Specify outcome models
+model_form_x_t1 = "x1*1 + x2*1 + x3*1 + x4*1"
+model_form_x_t2 = "x1*1 + x2*(-1) + x3*(-1) + x4*1"
+
+outcome_model_specs = list(
+  list(effect = 3, model_form_x = model_form_x_t1, noise_mean = 0, noise_sd = 0.5),  # model form for the first time point, given by model_form1
+  list(effect = 0, model_form_x = model_form_x_t2, noise_mean = 0, noise_sd = 0.5)  # model form for the second time point, given by model_form2
+)
+
+Data = simulate_trial(X_int, X_ext, prob_treated = 2/3, OLE_flag = F, T_cross = 0, outcome_model_specs)
+```
+
+Display the first 10 rows of the dataset:
+```{r}
+head(Data, 10)
+```
+
+
+
+
+## 2. Simulate outcomes for OLE study
+
+For OLE study, while most of the components remain unchanged compared to primary analysis, there are two crucial modifications:
+
+(1) For treatment allocation, besides the allocation indicator for the first phase, we also need to add in one indicator for the second phase;
+(2) For outcome model, the model forms should be formulated in terms of the treatment allocation vector specific to each phase of the design.
+
+Here, besides the aforementioned setup, we further consider two more additional followup time points. At these two later time points, all the participants in the interal group are switched to treated group $A = 1$. The outcome models are still linear but with time-varying parameters.
+
+
+### Simulate outcomes after OLE
+```{r}
+# Specify outcome models after OLE
+# clarify certain format of the dataset
+model_form_x_t1 = "x1*1 + x2*1 + x3*1 + x4*1"
+model_form_x_t2 = "x1*1 + x2*(-1) + x3*(-1) + x4*1"
+model_form_x_t3 = "x1*1 + x2*1 + x3*1 + x4*1"
+model_form_x_t4 = "x1*1 + x2*(-1) + x3*(-1) + x4*1"
+
+outcome_model_specs = list(
+  list(effect = 3, model_form_x = model_form_x_t1, noise_mean = 0, noise_sd = 0.5),  # model form for the first time point, given by model_form1
+  list(effect = 0, model_form_x = model_form_x_t2, noise_mean = 0, noise_sd = 0.5),  # model form for the second time point, given by model_form2
+  list(effect = 5, model_form_x = model_form_x_t3, noise_mean = 0, noise_sd = 0.5),  # model form for the third time point, given by model_form3
+  list(effect = 5, model_form_x = model_form_x_t4, noise_mean = 0, noise_sd = 0.5)   # model form for the fourth time point, given by model_form4
+)
+
+
+Data = simulate_trial(X_int,   # simulated covariates for internal study
+                      X_ext,   # simulated covariates for external study
+                      prob_treated = 2/3, # treatment probability for two periods
+                      OLE_flag = T,
+                      T_cross = 2,  # follow up time within each phases
+                      outcome_model_specs)  # outcome models
+
+```
+
+
+Display the first 10 rows of the dataset:
+```{r}
+head(Data, 10)
+```
+
+putting some instruction here...
+

@@ -1,0 +1,415 @@
+---
+title: "Untitled"
+author: "Lei"
+date: "2024-02-07"
+output: html_document
+---
+
+## mimic real world data
+
+### 1. load and process the trial data
+```{r}
+load("~/rdborrow-pub/Study/output/bene.RData")
+load("~/rdborrow-pub/Study/output/outcome.RData")
+
+mydat = bene%>%
+    filter(Study %in% c("Previous Placebo","Sunfish Part 2"))%>%
+    mutate(Ambulatory_Status=ifelse(Ambulatory_Status=="NON-AMBULATORY",0,ifelse(Ambulatory_Status=="AMBULATORY",1,NA)))%>%
+    mutate(SMA_Type=ifelse(SMA_Type=="TYPE II", 0, ifelse(SMA_Type=="TYPE III",1,NA)))%>%
+    mutate(SMN2_Copy_Number=as.numeric(SMN2_Copy_Number))%>%
+    mutate(Scoliosis=ifelse(Scoliosis=="Y", 1, ifelse(Scoliosis=="N", 0, NA)))%>%
+    mutate(Age_Enrollment=Age)%>%
+    mutate(S=ifelse(Study=="Sunfish Part 2",1,0))%>%
+    mutate(A=ifelse(ACTARM=="PART 2 - RO7034067",1,0))%>%
+    dplyr::select(UNI_ID,Study,S,A,Ambulatory_Status, SMA_Type, SMN2_Copy_Number, Scoliosis, Age_Enrollment)%>%
+    left_join((outcome%>%filter(AVISIT=="BASELINE")%>%dplyr::select(UNI_ID,MFM32)%>%rename(Y0=MFM32)),by="UNI_ID")%>%
+    left_join((outcome%>%filter(AVISIT=="Week 35"|AVISIT=="Week 26")%>%dplyr::select(UNI_ID,change_from_baseline)%>%rename(Y1=change_from_baseline)),by="UNI_ID")%>%
+    left_join((outcome%>%filter(AVISIT=="Week 52")%>%dplyr::select(UNI_ID,change_from_baseline)%>%rename(Y2=change_from_baseline)),by="UNI_ID")%>%
+    left_join((outcome%>%filter(AVISIT=="Week 78")%>%dplyr::select(UNI_ID,change_from_baseline)%>%rename(Y3=change_from_baseline)),by="UNI_ID")%>%
+    left_join((outcome%>%filter(AVISIT=="Week 104")%>%dplyr::select(UNI_ID,change_from_baseline)%>%rename(Y4=change_from_baseline)),by="UNI_ID")
+
+
+mydat
+
+InternalStudy = mydat %>% filter(S == 1)
+ExternalStudy = mydat %>% filter(S == 0)
+```
+
+
+
+### 2. extract summary statistics for internal data
+```{r}
+# for internal data
+print("SMA:")
+table(InternalStudy$SMA_Type)/sum(table(InternalStudy$SMA_Type))
+print("SMN2:")
+table(InternalStudy$SMN2_Copy_Number)/sum(table(InternalStudy$SMN2_Copy_Number))
+print("Scoliosis")
+table(InternalStudy$Scoliosis)/sum(table(InternalStudy$Scoliosis))
+print("Age_Enrollment")
+mean(InternalStudy$Age_Enrollment)
+```
+
+
+```{r}
+fit = lm(Y0 ~ Age_Enrollment + SMN2_Copy_Number + SMA_Type + Scoliosis, data = InternalStudy)
+fit
+```
+
+
+
+```{r}
+form_x_s="SMA_Type + SMN2_Copy_Number + Scoliosis + Age_Enrollment + Y0"
+form_x="SMA_Type + SMN2_Copy_Number + Scoliosis + Age_Enrollment + Y0 +  A"
+
+model.list = lapply(1:4, function(x){
+      assign(paste("m",x,''),lm(as.formula(paste(paste("Y",x,sep=''), "~", form_x)), data = InternalStudy))
+      })
+list2env(setNames(model.list,c("m1","m2","m3","m4")), envir = .GlobalEnv)
+```
+
+```{r}
+m1$coefficients
+m2$coefficients
+m3$coefficients
+m4$coefficients
+```
+
+
+Setup:
+
+1. SMA: 0 (0.7), 1 (0.3)
+2. SMN2: 3 (0.9), 4 (0.1)
+3. Scoliosis: 0 (0.3), 1 (0.7)
+4. Age_Enrollment: 10
+5. Y0: Coefficients  30, 10, 7, -6, -0.5
+(Intercept)    Age_Enrollment  SMN2_Copy_Number          SMA_Type         Scoliosis  
+   30           -0.5265            7.3815                9.7557           -5.9700  
+
+6. Y1: Coefficients  10      -0.5      -1.5      -1      -0.15      -0.1       (A) 1.3
+6. Y2: Coefficients  5        0.7       0.1     -0.4     -0.3       -0.1       (A) 2.0
+6. Y3: Coefficients  4        1.5       2.0     -1.0     -0.4       -0.1       (A) 1.5
+6. Y4: Coefficients 0.6       1.6       3.0     -0.5     -0.4       -0.1       (A) 2.1
+
+
+
+
+### 3. extract summary statistics for external data
+```{r}
+# for external data
+print("SMA:")
+table(ExternalStudy$SMA_Type)/sum(table(ExternalStudy$SMA_Type))
+print("SMN2:")
+table(ExternalStudy$SMN2_Copy_Number)/sum(table(ExternalStudy$SMN2_Copy_Number))
+print("Scoliosis")
+table(ExternalStudy$Scoliosis)/sum(table(ExternalStudy$Scoliosis))
+print("Age_Enrollment")
+mean(ExternalStudy$Age_Enrollment)
+```
+
+
+```{r}
+fit = lm(Y0 ~ Age_Enrollment + SMN2_Copy_Number + SMA_Type + Scoliosis, data = ExternalStudy)
+fit
+```
+
+```{r}
+form_x_s="SMA_Type + SMN2_Copy_Number + Scoliosis + Age_Enrollment + Y0"
+form_x="SMA_Type + SMN2_Copy_Number + Scoliosis + Age_Enrollment + Y0"
+
+model.list = lapply(1:4, function(x){
+      assign(paste("m",x,''),lm(as.formula(paste(paste("Y",x,sep=''), "~", form_x)), data = ExternalStudy))
+      })
+list2env(setNames(model.list,c("m1","m2","m3","m4")), envir = .GlobalEnv)
+```
+
+```{r}
+m1$coefficients
+m2$coefficients
+m3$coefficients
+m4$coefficients
+```
+
+Setup:
+
+1. SMA: 0 (0.7), 1 (0.3)
+2. SMN2: 3 (0.9), 4 (0.1)
+3. Scoliosis: 0 (0.3), 1 (0.7)
+4. Age_Enrollment: 10
+5. Y0: 50 10    2   -11   -0.3   
+6. Y1: 11 1.5  -1.3  -1.5  -0.4   -0.1 
+7. Y2: 10 0.02 -2.0  -1.4  -0.07  -0.05
+8. Y3: 20  3   -4.5  -2.0  -0.1   -0.1
+9. Y4: 10 -0.3 -2.0 -0.7  0.1   -0.05
+
+
+### 4. summary statistics for outcomes
+
+```{r}
+form_x_s="SMA_Type + SMN2_Copy_Number + Scoliosis + Age_Enrollment + Y0"
+form_x="SMA_Type + SMN2_Copy_Number + Scoliosis + Age_Enrollment + Y0 + A"
+m0 = glm(as.formula(paste("S", "~", form_x_s)), data = mydat, family = "binomial") # propensity of trial participation model
+    # outcome models, time specific
+model.list = lapply(1:4, function(x){
+      assign(paste("m",x,''),lm(as.formula(paste(paste("Y",x,sep=''), "~", form_x)), data = mydat))
+      })
+list2env(setNames(model.list,c("m1", "m2", "m3", "m4")), envir = .GlobalEnv)
+```
+
+```{r}
+m1$coefficients
+m2$coefficients
+m3$coefficients
+m4$coefficients
+```
+
+
+### 5. summary statistics across the full dataset
+
+1. Model for baseline covariate: 
+
+SMA - Binary: 0.7 for type II, 0.3 for type III (Binary - hide the name) SMA type
+
+SMN2 - Binary: 0.9 SMN2 = 3, 0.1 SMN2 = 4; SMN
+
+Scoliosis - Binary: 0.3, 0.7 Scoliosis
+
+Get the contigency table - and compute the conditional distributions of the binary variables
+
+Age: Exp(1/10)
+
+Y0: glm of the four variables above
+
+Intercept = 30
+Age = -0.35
+Copy_number = 7
+SMA = 10
+Scoliosis = -7
+
+varnames = c("1", paste0("x", 1:5), "A")
+
+2. Model for Y1
+
+10.0       0.05      -1.5       -1.0       -0.2        -0.1        1.5
+
+3. Model for Y2
+
+6.0        0.5       -0.5       -1.0       -0.3        -0.06       1.8
+
+4. Model for Y3
+
+5.0        1.9        1.4       -1.3       -0.4        -0.15       1.6
+
+5. Model for Y4
+
+1.2        1.0        2.0       -0.5       -0.4        -0.10       2.5
+
+6. Model for S
+
+2.0,      0.15,       0.40,      0.15,     -0.1        -0.03
+
+
+
+     (Intercept)         SMA_Type SMN2_Copy_Number        Scoliosis   Age_Enrollment               Y0 
+      1.50151226       0.15529080       0.35869342       0.12625211      -0.05580194      -0.01993356 
+     (Intercept)         SMA_Type SMN2_Copy_Number        Scoliosis   Age_Enrollment               Y0                A 
+     11.02325585       0.01054050      -1.50790732      -1.03571873      -0.17459361      -0.07386723       1.13914350 
+     (Intercept)         SMA_Type SMN2_Copy_Number        Scoliosis   Age_Enrollment               Y0                A 
+      6.12744558       0.59272763      -0.26416927      -0.73858409      -0.21974508      -0.05891586       1.59955414 
+     (Intercept)         SMA_Type SMN2_Copy_Number        Scoliosis   Age_Enrollment               Y0                A 
+       5.0038246        1.7295871        1.2872347       -1.2121099       -0.3044909       -0.1264483        1.7231309 
+     (Intercept)         SMA_Type SMN2_Copy_Number        Scoliosis   Age_Enrollment               Y0                A 
+      1.08619485       1.24626482       2.08881896      -0.45598682      -0.32814398      -0.09963459       2.36451560 
+      
+      
+ > summary(m1)$sigma
+ [1] 3.806692
+ > summary(m2)$sigma
+ [1] 4.146124
+ > summary(m3)$sigma
+ [1] 4.184836
+ > summary(m4)$sigma
+ [1] 5.492125
+
+
+
+
+
+
+Binary: 0.7 for type II, 0.3 for type III (Binary - hide the name) SMA type
+
+Binary: 0.9 SMN2 = 3, 0.1 SMN2 = 4; SMN
+
+Binary: 0.3, 0.7 Scoliosis
+
+Get the contigency table - and compute the conditional distributions of the binary variables
+
+Age: Exp(1/10)
+
+Y0: glm of the four variables above
+
+Intercept = 30
+Age = -0.35
+Copy_number = 7
+SMA = 10
+Scoliosis = -7
+
+summary(fit)$sigma = 10
+
+Describe roughly how we obtain these number - similar to the real clinical trial data
+
+Different model for the Externals
+
+Simulated_real_data -> can go to pub
+
+Monte Carlo for Simulated_real_data -> do not put to data folder but describe in manuscript
+
+
+
+
+
+```{r}
+form_x_s="SMA_Type+ SMN2_Copy_Number+ Scoliosis+ Age_Enrollment+Y0+S"
+form_x="SMA_Type+ SMN2_Copy_Number+ Scoliosis+ Age_Enrollment+Y0+A"
+# m0 <- glm(as.formula(paste("S", "~", form_x_s)), data = mydat, family = "binomial") # propensity of trial participation model
+    # outcome models, time specific
+
+model.list=lapply(1:2, function(x){
+      assign(paste("m", x, ''), lm(as.formula(paste(paste("Y", x, sep=''), "~", form_x)), data = mydat))
+      })
+list2env(setNames(model.list,c("m1", "m2")), envir = .GlobalEnv)
+```
+
+
+```{r}
+model.list=lapply(3:4, function(x){
+      assign(paste("m", x, ''),lm(as.formula(paste(paste("Y", x, sep=''), "~", form_x_s)), data = mydat))
+      })
+list2env(setNames(model.list,c("m3", "m4")), envir = .GlobalEnv)
+```
+
+```{r}
+# m0$coefficients
+m1$coefficients
+m2$coefficients
+m3$coefficients
+m4$coefficients
+```
+
+
+
+
+## Generate data
+```{r}
+set.seed(202403)
+# simulate 300 sample
+  normal <- copula::normalCopula(param = c(0.8), dim = 4, dispstr = "ar1")
+  
+  #========== generate internal covariates =============
+  X_int <- simulate_X_copula(n = 200, 
+                             p = 4, 
+                             cp = normal,  # copula
+                             margins = c("binom", "binom", "binom", "exp"),  # specify marginal distributions
+                             paramMargins = list(list(size = 1, prob = 0.7), # specify parameters for marginals
+                                                 list(size = 1, prob = 0.9), 
+                                                 list(size = 1, prob = 0.3), 
+                                                 list(rate = 1/10)) 
+  ) 
+  
+  X_int$x4 = round(X_int$x4) + 1
+  X_int$x5 = 30 + 10 * X_int$x1 + (7) * X_int$x2 + (-6) * X_int$x3 + (-0.5) * X_int$x4 + rnorm(200, mean = 0, sd = 10)
+  
+  varnames = c("1", paste0("x", 1:5))
+  
+  #============ generate external covariates ==============
+  X_ext <- simulate_X_copula(n = 100, 
+                             p = 4, 
+                             cp = normal,  # copula
+                             margins = c("binom", "binom", "binom", "exp"),  # specify marginal distributions
+                             paramMargins = list(list(size = 1, prob = 0.7), # specify parameters for marginals
+                                                 list(size = 1, prob = 0.9), 
+                                                 list(size = 1, prob = 0.3), 
+                                                 list(rate = 1/10)) 
+  ) 
+  
+  X_ext$x4 = round(X_ext$x4) + 1
+  X_ext$x5 = 50 + 10 * X_ext$x1 + (2) * X_ext$x2 + (-1) * X_ext$x3 + (-0.3) * X_ext$x4 + rnorm(100, mean = 0, sd = 10)
+  
+  varnames = c("1", paste0("x", 1:5))
+  
+  #============ Specify outcome models ==============
+  model_form_x_t1 = setNames(c(10.0, 0.05, -1.5, -1.0, -0.2, -0.1), varnames) # 1.5*A, sigma = 4.0
+  model_form_x_t2 = setNames(c(6.0, 0.5, -0.5, -1.0, -0.3, -0.06), varnames) # 1.8*A, sigma = 4.0
+  model_form_x_t3 = setNames(c(5.0, 1.9, 1.4, -1.3, -0.4, -0.15), varnames) # 1.6*A, sigma = 4.0
+  model_form_x_t4 = setNames(c(1.2, 1.0, 2.0, -0.5, -0.4, -0.10), varnames) # 2.5*A, sigma = 5.0
+  
+  outcome_model_specs = list(
+    list(effect = 0, model_form_x = model_form_x_t1, # from data: true_effect = 1.5
+         noise_mean = 0, noise_sd = 4),  # model form for the first time point, given by model_form_x_t1
+    list(effect = 1.0, model_form_x = model_form_x_t2, # from data: true_effect = 1.8
+         noise_mean = 0, noise_sd = 4),  # model form for the second time point, given by model_form_x_t2
+    list(effect = 2.0, model_form_x = model_form_x_t3, # from data: true_effect = 1.6
+         noise_mean = 0, noise_sd = 4),  # model form for the third time point, given by model_form_x_t3
+    list(effect = 5.0, model_form_x = model_form_x_t4, # from data: true_effect = 2.5
+         noise_mean = 0, noise_sd = 4)  # model form for the fourth time point, given by model_form_x_t4
+  )
+  
+  #=========== generate trial data ============
+  SyntheticData = simulate_trial(X_int, 
+                                 X_ext, 
+                                 num_treated = 100, 
+                                 OLE_flag = T, 
+                                 T_cross = 2,  
+                                 outcome_model_specs) 
+
+  
+```
+
+
+```{r}
+usethis::use_data(SyntheticData, overwrite = TRUE)
+```
+
+
+
+## Including Plots
+
+Number of covariates: same as others
+
+Binary: 0.7 for type II, 0.3 for type III (Binary - hide the name) SMA type
+
+Binary: 0.9 SMN2 = 3, 0.1 SMN2 = 4; SMN
+
+Binary: 0.3, 0.7 Scoliosis
+
+Get the contigency table - and compute the conditional distributions of the binary variables
+
+Age: Exp(1/10)
+
+Y0: glm of the four variables above
+
+========
+02-14
+
+1. update the simulation section from this part
+
+2. Simulation part: draw the simulation many times and report some metrics
+
+- 
+
+========
+Comments from Herb and Chen: 
+
+1. Clarify: users have the option to include a diagonal case!! Default to be diagonal, otherwise customized
+
+2. consider general distributions - not just normal
+
+3. two ways: copula way and multivariate normal way
+
+4. some realistic numbers for other settings
+
+
+```{r}
+
+```
+

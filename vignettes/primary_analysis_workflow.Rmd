@@ -1,0 +1,192 @@
+---
+title: "Primary Analysis Workflow"
+author: "Lei"
+date: "2024-02-19"
+output: html_document
+---
+
+```{r setup, message=FALSE, warning=FALSE, include=FALSE}
+library(rdborrow)
+```
+
+
+
+## Primary analysis
+### 1 load and visualize data
+```{r}
+# Initialize an empty data list
+head(SyntheticData)
+```
+
+
+### 2 Estimation and inference:
+
+#### 2.1 Inverse probability weighting (IPW)
+1) IPW with zero weight (wt = 0):
+
+```{r}
+# test: within trial
+## Data argument + column names (coxph, glm)
+method_weighting_obj = setup_method_weighting(
+  method_name = "IPW",
+  optimal_weight_flag = F, 
+  wt = 0,
+  model_form_piS = "S ~ x1 + x2 + x3 + x4 + x5")
+
+analysis_primary_obj = setup_analysis_primary(
+  data = SyntheticData,
+  trial_status_col_name = "S", 
+  treatment_col_name = "A", 
+  outcome_col_name = c("y1", "y2"), 
+  covariates_col_name = c("x1", "x2", "x3", "x4", "x5"), 
+  method_weighting_obj = method_weighting_obj)
+
+res = run_analysis(analysis_primary_obj)
+res
+```
+
+2) IPW with data-adaptive weight:
+```{r}
+# test: within trial
+method_weighting_obj = setup_method_weighting(
+  method_name = "IPW",
+  optimal_weight_flag = T,
+  model_form_piS = "S ~ x1 + x2 + x3 + x4 + x5")
+
+analysis_primary_obj = setup_analysis_primary(
+  data = SyntheticData,
+  trial_status_col_name = "S", 
+  treatment_col_name = "A", 
+  outcome_col_name = c("y1", "y2"), 
+  covariates_col_name = c("x1", "x2", "x3", "x4", "x5"), 
+  method_weighting_obj = method_weighting_obj)
+
+res = run_analysis(analysis_primary_obj)
+
+res$borrow_weight
+res$results
+```
+
+#### 2.2 Augmented inverse probability weighting (AIPW)
+
+The second approach is AIPW, which also accommodates two external borrowing strategies.
+
+1) AIPW with zero weight (wt = 0):
+```{r}
+# test: AIPW with 0 weight, should be same as IPW with 0 weight
+method_weighting_obj = setup_method_weighting(
+  method_name = "AIPW",
+  optimal_weight_flag = F, 
+  wt = 0,
+  model_form_piS = "S ~ x1 + x2 + x3 + x4 + x5",
+  model_form_mu0_ext = c("y1 ~ x1 + x2 + x3 + x4 + x5",
+                         "y2 ~ x1 + x2 + x3 + x4 + x5"))
+
+analysis_primary_obj = setup_analysis_primary(
+  data = SyntheticData,
+  trial_status_col_name = "S", 
+  treatment_col_name = "A", 
+  outcome_col_name = c("y1", "y2"), 
+  covariates_col_name = c("x1", "x2", "x3", "x4", "x5"), 
+  method_weighting_obj = method_weighting_obj)
+
+res = run_analysis(analysis_primary_obj)
+```
+
+
+
+2) AIPW with data adaptive weight:
+```{r}
+# test: AIPW with given weight
+# bootstrap as part of the method and analysis
+method_weighting_obj = setup_method_weighting(
+  method_name = "AIPW",
+  optimal_weight_flag = T,
+  model_form_piS = "S ~ x1 + x2 + x3 + x4 + x5",
+  model_form_mu0_ext = c("y1 ~ x1 + x2 + x3 + x4 + x5",
+                         "y2 ~ x1 + x2 + x3 + x4 + x5"))
+
+analysis_primary_obj = setup_analysis_primary(
+  data = SyntheticData,
+  trial_status_col_name = "S", 
+  treatment_col_name = "A", 
+  outcome_col_name = c("y1", "y2"), 
+  covariates_col_name = c("x1", "x2", "x3", "x4", "x5"), 
+  method_weighting_obj = method_weighting_obj)
+
+res = run_analysis(analysis_primary_obj)
+```
+
+
+
+### 3 Bootstrap inference
+
+In this section we present Bootstrap inference results. We report Bootstrap confidence intervals with adjusted quantile ranges. 
+
+1) IPW with bootstrap CI
+```{r}
+# test: within trial
+## Data argument + column names (coxph, glm)
+## having a bootstrap_flag outside the class
+bootstrap_obj = setup_bootstrap(
+  replicates = 2e3,
+  bootstrap_CI_type = "perc"
+)
+
+method_weighting_obj = setup_method_weighting(
+  method_name = "IPW",
+  optimal_weight_flag = T, 
+  bootstrap_flag = T,
+  bootstrap_obj = bootstrap_obj,
+  wt = 0,
+  model_form_piS = "S ~ x1 + x2 + x3 + x4 + x5")
+
+analysis_primary_obj = setup_analysis_primary(
+  data = SyntheticData,
+  trial_status_col_name = "S", 
+  treatment_col_name = "A", 
+  outcome_col_name = c("y1", "y2"), 
+  covariates_col_name = c("x1", "x2", "x3", "x4", "x5"), 
+  method_weighting_obj = method_weighting_obj)
+
+res = run_analysis(analysis_primary_obj)
+res
+
+```
+
+2) AIPW with bootstrap CI
+
+```{r}
+# test: with optimal weight
+## Data argument + column names (coxph, glm)
+bootstrap_obj = setup_bootstrap(
+  replicates = 2e3,
+  bootstrap_CI_type = "perc"
+)
+
+method_weighting_obj = setup_method_weighting(
+  method_name = "AIPW",
+  optimal_weight_flag = T, 
+  wt = 0,
+  bootstrap_flag = T,
+  bootstrap_obj = bootstrap_obj,
+  model_form_piS = "S ~ x1 + x2 + x3 + x4 + x5",
+  model_form_mu0_ext = c("y1 ~ x1 + x2 + x3 + x4 + x5",
+                         "y2 ~ x1 + x2 + x3 + x4 + x5"))
+
+analysis_primary_obj = setup_analysis_primary(
+  data = SyntheticData,
+  trial_status = "S", 
+  treatment = "A", 
+  outcome = c("y1", "y2"), 
+  covariates = c("x1", "x2", "x3", "x4", "x5"), 
+  method_weighting_obj = method_weighting_obj)
+
+
+res = run_analysis(analysis_primary_obj)
+
+## best to just do the last one, but also have options
+## time dependent way of effects and modeling 
+```
+
+

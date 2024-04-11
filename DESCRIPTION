@@ -1,0 +1,59 @@
+Package: rdborrow
+Type: Package
+Title: External Control Borrowing for Rare Disease Simulation and Analysis
+Version: 0.0.1.0
+RoxygenNote: 7.2.3
+Depends:
+    R (>= 2.15),
+    checkmate,
+    futile.logger,
+    mvtnorm,
+    dplyr,
+    tidyverse,
+    boot,
+    Matrix,
+    CVXR,
+    gsl,
+    copula
+Suggests: 
+    knitr,
+    rmarkdown,
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
+Collate: 
+    'DID_EC_AIPW_bootstrap.R'
+    'DID_EC_AIPW.R'
+    'DID_EC_IPW_bootstrap.R'
+    'DID_EC_IPW.R'
+    'DID_EC_OR_bootstrap.R'
+    'DID_EC_OR.R'
+    'EC_AIPW_OPT_bootstrap.R'
+    'EC_AIPW_OPT.R'
+    'EC_IPW_OPT_bootstrap.R'
+    'EC_IPW_OPT.R'
+    'SCMboot.R'
+    'SCM.R'
+    'bootstrap_class.R'
+    'method_class.R'
+    'analysis_class.R'
+    'method_SCM_class.R'
+    'method_DID_class.R'
+    'analysis_OLE_class.R'
+    'method_weighting_class.R'
+    'analysis_primary_class.R'
+    'package.R'
+    'rdborrow-package.R'
+    'run_analysis.R'
+    'run_simulation.R'
+    'simulate_X_copula.R'
+    'simulate_X_dct_mvnorm.R'
+    'simulate_X_mixture.R'
+    'simulate_outcome_from_model.R'
+    'simulate_trial.R'
+    'simulate_trial_status.R'
+    'simulate_trt_assign.R'
+    'simulation_class.R'
+    'simulation_report_class.R'
+VignetteBuilder: knitr
+LazyData: true
+Encoding: UTF-8

@@ -1,0 +1,324 @@
+---
+title: "primary_analysis"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{primary_analysis}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, message=FALSE, warning=FALSE, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup, message=FALSE, warning=FALSE, include=FALSE}
+library(rdborrow)
+set.seed(2023)
+```
+
+
+In this document we conduct primary analysis to estimate causal effects in randomized trials for incorporating external controls with longitudinal outcomes.
+
+
+### 1. Simulate a dataset
+First we simulate a dataset following the steps from the vignette "simulate_outcome". The data contains 200 patients in the internal study and 100 in the external study.
+
+```{r}
+# S = 1
+X_int = simulate_X_dct_mvnorm(n = 200,   # number of units
+                              p = 4,    # dimension of variables
+                              mu = rep(1, 4),  # population mean of multivariate normal
+                              sig = diag(4),   # population covariance matrix of mv normal
+                              cat_cols = c(1, 2), # which columns are categorical
+                              cat_prob = list(c(0.3, 0.7), c(0.4, 0.6)) # the pdf of categorical variables 
+                              )
+
+# S = 0
+X_ext = simulate_X_dct_mvnorm(n = 100,   # number of units
+                              p = 4,    # dimension of variables
+                              mu = rep(0, 4),  # population mean of multivariate normal
+                              sig = diag(4),   # population covariance matrix of mv normal
+                              cat_cols = c(1, 2), # which columns are categorical
+                              cat_prob = list(c(0.3, 0.7), c(0.4, 0.6)) # the pdf of categorical variables 
+                              )
+
+# Specify outcome models
+model_form_x_t1 = "x1*1 + x2*1 + x3*1 + x4*1"
+model_form_x_t2 = "x1*1 + x2*(-1) + x3*(-1) + x4*1"
+
+outcome_model_specs = list(
+  list(effect = 3, model_form_x = model_form_x_t1, noise_mean = 0, noise_sd = 0.5),  # model form for the first time point, given by model_form1
+  list(effect = 0, model_form_x = model_form_x_t2, noise_mean = 0, noise_sd = 0.5)  # model form for the second time point, given by model_form2
+)
+# piecewise effects; check how Xiner did it
+
+Data = simulate_trial(X_int, 
+                      X_ext, 
+                      prob_treated = 2/3, 
+                      OLE_flag = F, 
+                      T_cross = 2,  
+                      outcome_model_specs)
+
+# check psborrow and how do they call the statement
+# send a chat message to matt
+# how many in treatment and control
+```
+
+Display the first 10 rows of the simulated dataset:
+```{r}
+head(Data, 10)
+```
+
+
+### 2. Estimation and inference
+#### 2.1 Inverse probability weighting (IPW)
+
+The first method we use is IPW. We compare three strategies:
+- IPW with only internal data (wt = 0)
+- IPW incorporating external data with given weight
+- IPW incorporating external data with data-adaptive weight
+
+1) IPW with zero weight (wt = 0):
+
+analysis part: how they code the pulling data frame way in S4 style
+```{r}
+# test: within trial
+## Data argument + column names (coxph, glm)
+method_weighting_obj = setup_method_weighting(method_name = "IPW",
+                                    optimal_weight_flag = F, 
+                                    wt = 0,
+                                    model_form_piS = "S ~ x1 + x2 + x3 + x4")
+
+analysis_primary_obj = setup_analysis_primary(
+  data = Data,
+  trial_status_col_name = "S", 
+  treatment_col_name = "A", 
+  outcome_col_name = c("y1", "y2"), 
+  covariates_col_name = c("x1", "x2", "x3", "x4"), 
+  method_weighting_obj = method_weighting_obj)
+```
+
+
+```{r}
+run_analysis(analysis_primary_obj)
+```
+
+2) IPW with given weight (wt = 0.5):
+```{r}
+# test: within trial
+method_weighting_obj = setup_method_weighting(method_name = "IPW",
+                                              optimal_weight_flag = F, 
+                                              wt = 0.5,
+                                              model_form_piS = "S ~ x1 + x2 + x3 + x4")
+
+analysis_primary_obj = setup_analysis_primary(
+  data = Data,
+  trial_status_col_name = "S", 
+  treatment_col_name = "A", 
+  outcome_col_name = c("y1", "y2"), 
+  covariates_col_name = c("x1", "x2", "x3", "x4"), 
+  method_weighting_obj = method_weighting_obj)
+
+run_analysis(analysis_primary_obj)
+```
+
+
+3) IPW with data-adaptive weight:
+```{r}
+# test: within trial
+method_weighting_obj = setup_method_weighting(method_name = "IPW",
+                          optimal_weight_flag = T,
+                          model_form_piS = "S ~ x1 + x2 + x3 + x4")
+
+analysis_primary_obj = setup_analysis_primary(
+  data = Data,
+  trial_status_col_name = "S", 
+  treatment_col_name = "A", 
+  outcome_col_name = c("y1", "y2"), 
+  covariates_col_name = c("x1", "x2", "x3", "x4"), 
+  method_weighting_obj = method_weighting_obj)
+
+run_analysis(analysis_primary_obj)
+
+# coverage: 
+```
+
+
+#### 2.2 Augmented inverse probability weighting (AIPW)
+
+The second approach is AIPW, which also accommodates three external borrowing strategies.
+
+1) AIPW with zero weight (wt = 0):
+```{r}
+# test: AIPW with 0 weight, should be same as IPW with 0 weight
+method_weighting_obj = setup_method_weighting(method_name = "AIPW",
+                                              optimal_weight_flag = F, 
+                                              wt = 0,
+                                              model_form_piS = "S ~ x1 + x2 + x3 + x4",
+                                              model_form_mu0_ext = c("y1 ~ x1 + x2 + x3 + x4",
+                                                                     "y2 ~ x1 + x2 + x3 + x4"))
+
+analysis_primary_obj = setup_analysis_primary(
+  data = Data,
+  trial_status_col_name = "S", 
+  treatment_col_name = "A", 
+  outcome_col_name = c("y1", "y2"), 
+  covariates_col_name = c("x1", "x2", "x3", "x4"), 
+  method_weighting_obj = method_weighting_obj)
+
+run_analysis(analysis_primary_obj)
+```
+
+
+2) AIPW with given weight (wt = 0.5):
+```{r}
+# test: AIPW with given weight
+method_weighting_obj = setup_method_weighting(method_name = "AIPW",
+                                              optimal_weight_flag = F, 
+                                              wt = 0.5,
+                                              model_form_piS = "S ~ x1 + x2",
+                                              model_form_mu0_ext = c("y1 ~ x1 + x2 + x3 + x4",
+                                                                     "y2 ~ x1 + x2 + x3 + x4"))
+
+analysis_primary_obj = setup_analysis_primary(
+  data = Data,
+  trial_status_col_name = "S", 
+  treatment_col_name = "A", 
+  outcome_col_name = c("y1", "y2"), 
+  covariates_col_name = c("x1", "x2", "x3", "x4"), 
+  method_weighting_obj = method_weighting_obj)
+
+run_analysis(analysis_primary_obj)
+
+# add levels of confidence width
+# splitting out 
+
+# (tau1 - tau)/sd.tau1 -> N(0,1)
+```
+
+3) AIPW with optimal weight:
+```{r}
+# test: AIPW with given weight
+# bootstrap as part of the method and analysis
+method_weighting_obj = setup_method_weighting(method_name = "AIPW",
+                          optimal_weight_flag = T, 
+                          model_form_piS = "S ~ x1 + x2",
+                          model_form_mu0_ext = c("y1 ~ x1 + x2 + x3 + x4",
+                                             "y2 ~ x1 + x2 + x3 + x4"))
+
+analysis_primary_obj = setup_analysis_primary(
+  data = Data,
+  trial_status_col_name = "S", 
+  treatment_col_name = "A", 
+  outcome_col_name = c("y1", "y2"), 
+  covariates_col_name = c("x1", "x2", "x3", "x4"), 
+  method_weighting_obj = method_weighting_obj)
+
+run_analysis(analysis_primary_obj)
+
+## future optimal weight flag - a new class/ TODO
+```
+
+
+### 3. Bootstrap inference
+
+In this section we present Bootstrap inference results. We report Bootstrap confidence intervals with adjusted quantile ranges. 
+
+```{r}
+# test: within trial
+## Data argument + column names (coxph, glm)
+## having a bootstrap_flag outside the class
+bootstrap_obj = setup_bootstrap(
+  replicates = 1e3,
+  bootstrap_CI_type = "bca"
+)
+
+method_weighting_obj = setup_method_weighting(method_name = "IPW",
+                          optimal_weight_flag = T, 
+                          bootstrap_flag = T,
+                          bootstrap_obj = bootstrap_obj,
+                          wt = 0,
+                          model_form_piS = "S ~ x1 + x2 + x3 + x4")
+
+analysis_primary_obj = setup_analysis_primary(
+  data = Data,
+  trial_status_col_name = "S", 
+  treatment_col_name = "A", 
+  outcome_col_name = c("y1", "y2"), 
+  covariates_col_name = c("x1", "x2", "x3", "x4"), 
+  method_weighting_obj = method_weighting_obj)
+
+run_analysis(analysis_primary_obj)
+
+```
+
+
+```{r}
+# test: with weight 0.5
+## Data argument + column names (coxph, glm)
+bootstrap_obj = setup_bootstrap(
+  replicates = 1e3,
+  bootstrap_CI_type = "bca"
+)
+
+method_weighting_obj = setup_method_weighting(method_name = "AIPW",
+                          optimal_weight_flag = F, 
+                          wt = 0.5,
+                          bootstrap_flag = T,
+                          bootstrap_obj = bootstrap_obj,
+                          model_form_piS = "S ~ x1 + x2 + x3 + x4",
+                          model_form_mu0_ext = c("y1 ~ x1 + x2 + x3 + x4",
+                                             "y2 ~ x1 + x2 + x3 + x4"))
+
+analysis_primary_obj = setup_analysis_primary(
+  data = Data,
+  trial_status_col_name = "S", 
+  treatment_col_name = "A", 
+  outcome_col_name = c("y1", "y2"), 
+  covariates_col_name = c("x1", "x2", "x3", "x4"), 
+  method_weighting_obj = method_weighting_obj)
+
+
+run_analysis(analysis_primary_obj)
+
+## best to just do the last one, but also have options
+## time dependent way of effects and modeling 
+```
+
+
+```{r}
+# test: with optimal weight
+## Data argument + column names (coxph, glm)
+bootstrap_obj = setup_bootstrap(
+  replicates = 2e3,
+  bootstrap_CI_type = "bca"
+)
+
+method_weighting_obj = setup_method_weighting(method_name = "AIPW",
+                          optimal_weight_flag = T, 
+                          wt = 0,
+                          bootstrap_flag = T,
+                          bootstrap_obj = bootstrap_obj,
+                          model_form_piS = "S ~ x1 + x2 + x3 + x4",
+                          model_form_mu0_ext = c("y1 ~ x1 + x2 + x3 + x4",
+                                             "y2 ~ x1 + x2 + x3 + x4"))
+
+analysis_primary_obj = setup_analysis_primary(
+  data = Data,
+  trial_status = "S", 
+  treatment = "A", 
+  outcome = c("y1", "y2"), 
+  covariates = c("x1", "x2", "x3", "x4"), 
+  method_weighting_obj = method_weighting_obj)
+
+
+run_analysis(analysis_primary_obj)
+
+## best to just do the last one, but also have options
+## time dependent way of effects and modeling 
+```
+
+

@@ -1,0 +1,609 @@
+---
+title: "Rdborrow Design for Users"
+output: pdf_document
+date: "2023-06-16"
+---
+
+# Test loading the R package
+```{r}
+library(devtools)
+
+devtools::document()
+load_all(".") # Working directory should be in the package SCC_R_package
+# devtools::install('rdborrow')
+```
+
+```{r}
+devtools::install()
+```
+
+
+# Test building vignettes
+```{r}
+# create a vignette
+usethis::use_vignette("my-vignette")
+```
+
+```{r}
+# install the package with vignettes built
+install(build_vignettes = TRUE)
+```
+
+```{r}
+devtools::install()
+devtools::build_rmd("vignettes/primary_analysis.Rmd")
+```
+
+
+# Test data simulation 
+## Simulate primary analysis data from model
+
+### Simulate X 
+
+#### from discretized multivariate normal distribution:
+
+```{r}
+# testing
+test1 = simulate_X_dct_mvnorm(20, 3, mu = rep(0, 3), sig = diag(3), cat_cols = c(1), cat_prob = list(c(0.3, 0.7)))
+test2 = simulate_X_dct_mvnorm(20, 3, mu = rep(0, 3), sig = diag(3), cat_cols = c(1, 3), cat_prob = list(c(0.2, 0.6, 0.2), c(0.3, 0.7)))
+test1
+test2
+
+
+```
+
+
+#### from copula:
+
+```{r}
+# test simulation from copula
+normal <- normalCopula(param = c(0.8), dim = 4, dispstr = "ar1")
+X <- simulate_X_copula(1000, 4, normal, 
+                       margins = c("norm", "t", "norm", "binom"), 
+                       paramMargins = list(list(mean = 2, sd=3),
+                                  list(df = 2),
+                                  list(mean = 0, sd = 1),
+                                  list(size = 10, prob = 0.5))
+                       )
+X
+cor(X, method = "spearman")
+```
+
+TODO: Incorporate the real data information
+
+```{r}
+# test simulation from copula
+normal <- normalCopula(param = c(0.8), dim = 4, dispstr = "ar1")
+X <- simulate_X_copula(1000, 4, normal, 
+                       margins = c("norm", "t", "norm", "pois"), 
+                       paramMargins = list(list(mean = 2, sd=3),
+                                  list(df = 2),
+                                  list(mean = 0, sd = 1),
+                                  list(lambda = 5))
+                       )
+X
+cor(X, method = "spearman")
+```
+
+
+
+#### from mixture models, such as gaussian mixture:
+
+```{r}
+# test only continuous
+X = simulate_X_mixture(n = 100, p_cat = 0, p_cont = 2, 
+                   cat_level_list = list(),
+                   cat_comb_prob = c(),
+                   cont_para_list = list(list(mean = c(0, 0), sigma = diag(2)))
+                   )
+X
+```
+
+```{r}
+# test only categorical
+X = simulate_X_mixture(n = 100, p_cat = 2, p_cont = 0, 
+                   cat_level_list = list(x1 = c(0,1), x2 = c(0,1,2)),
+                   cat_comb_prob = c(0.1, 0.1, 0.3, 0.3, 0.1, 0.1),
+                   cont_para_list = list()
+                   )
+X
+```
+
+```{r}
+# test mixture of continuous and categorical
+X = simulate_X_mixture(n = 100, p_cat = 2, p_cont = 2, 
+                   cat_level_list = list(x1 = c(0,1), x2 = c(0,1,2)),
+                   cat_comb_prob = c(0.1, 0.1, 0.3, 0.3, 0.1, 0.1),
+                   cont_para_list = list(list(mean = c(0, 0), sigma = diag(2)), 
+                                         list(mean = c(0, 1), sigma = diag(2)),
+                                         list(mean = c(0, 2), sigma = diag(2)),
+                                         list(mean = c(1, 0), sigma = diag(2)),
+                                         list(mean = c(1, 1), sigma = diag(2)),
+                                         list(mean = c(1, 2), sigma = diag(2))
+                                         )
+                   )
+head(X)
+```
+
+#### from structural causal models
+```{r}
+# X1 -> X2 -> X3 -> X4
+```
+
+
+S|X
+X|S more realistic
+### Simulate trial status
+
+```{r}
+# test trial participation status generation function
+S = simulate_trial_status(X, model_specs = list(
+  family = "binomial",
+  coef = c(1,2,3)
+))
+S
+```
+
+
+### Simulate treatment
+
+```{r}
+A = simulate_trt_assign(X, S, prob = 2/3)
+A
+```
+
+
+### Simulate outcome
+
+```{r}
+# test function: simulate data from model
+model_form_x_1 = "Y = A*3 + x1*1 + x2*1 + rnorm(n, mean = 0, sd=0.5)"
+outcome_model_specs = list(
+  list(
+    effect = 3,
+    model_form_x = model_form_x_1,
+    noise_mean = 0,
+    noise_sd = 0.5
+  )
+)
+Y = simulate_outcome_from_model(T_follow = 1, X = X, A = A, 
+                                outcome_model_specs)
+Y
+```
+
+setting 6: time variant in t
+```{r}
+# test function: simulate data from model
+model_form1 = "y1 = A*3 + x1*1 + x2*1 + rnorm(n, mean = 0, sd=0.5)"
+model_form2 = "y2 = A*0 + x1*1 + x2*(-1) + rnorm(n, mean = 0, sd=0.5)"
+Y = simulate_outcome_from_model(T_follow = 2, X = X, A = A, 
+                                     outcome_model_specs = list(
+                                       list(
+                                         model_form = model_form1
+                                       ),
+                                       list(
+                                         model_form = model_form2
+                                       )
+                                     ))
+Y
+```
+
+
+## Simulate crossover data from model
+
+Question:
+
+1. seems that this requires two treatment indicators?
+
+## Simulate data from given dataset
+
+
+
+
+# Test method_obj and analysis_obj setup
+```{r}
+# test: within trial
+method_obj = setup_method(method_name = "IPW",
+                          optimal_weight_flag = F, 
+                          wt = 0,
+                          model_form_piS = "",
+                          model_form_mu0_ext = "",
+                          model_form_piA = "",
+                          model_form_mu0_rct = "",
+                          model_form_mu1_rct = "")
+
+analysis_obj = setup_analysis(trial_status = S, 
+                              treatment = A, 
+                              outcome = Y, 
+                              covariates = X, 
+                              method = method_obj,
+                              long_term_flag = F,
+                              long_term_marker = c(F, F, F, F))
+```
+
+
+# Analysis part: primary study
+
+mmrm package
+
+## Simulate a quick dataset
+```{r}
+# X
+X = simulate_X_mixture(n = 500, p_cat = 0, p_cont = 2, 
+                   cat_level_list = list(),
+                   cat_comb_prob = c(),
+                   cont_para_list = list(list(mean = c(0, 0), sigma = diag(2)))
+                   )
+
+# S
+S = simulate_trial_status(X, model_specs = list(
+  family = "binomial",
+  coef = c(1,2,3)
+))
+
+# A
+A = simulate_trt_assign(X, S, prob = 2/3)
+
+# Y
+model_form1 = "y1 = A*1 + x1*1 + x2*1 + rnorm(n, mean = 0, sd=0.5)"
+model_form2 = "y2 = A*2 + x1*1 + x2*(-1) + rnorm(n, mean = 0, sd=0.5)"
+model_form3 = "y3 = A*3 + x1*1 + x2*(-2) + rnorm(n, mean = 0, sd=0.5)"
+model_form4 = "y4 = A*4 + x1*1 + x2*(-3) + rnorm(n, mean = 0, sd=0.5)"
+
+Y = simulate_outcome_from_model(T_follow = 4, X = X, A = A, 
+                                     outcome_model_specs = list(
+                                       list(
+                                         model_form = model_form1
+                                       ),
+                                       list(
+                                         model_form = model_form2
+                                       ),
+                                       list(
+                                         model_form = model_form3
+                                       ),
+                                       list(
+                                         model_form = model_form4
+                                       )
+                                     ))
+
+(data.frame(X, S, A, Y))
+```
+
+
+
+
+## Test IPW
+```{r}
+# test: within trial
+method_obj = setup_method(name = "IPW",
+                          optimal_weight_flag = F, 
+                          wt = 0,
+                          model_form_piS = "S ~ x1 + x2")
+
+analysis_obj = setup_analysis(trial_status = S, 
+                              treatment = A, 
+                              outcome = Y, 
+                              covariates = X, 
+                              method = method_obj)
+
+run_analysis(analysis_obj, Bootstrap = F)
+```
+
+```{r}
+# test: IPW with given weight
+method_obj = setup_method(name = "IPW",
+                          optimal_weight_flag = F, 
+                          wt = 0.5,
+                          model_form_piS = "S ~ x1 + x2")
+
+analysis_obj = setup_analysis(trial_status = S, 
+                              treatment = A, 
+                              outcome = Y, 
+                              covariates = X, 
+                              method = method_obj)
+
+run_analysis(analysis_obj, Bootstrap = F)
+```
+
+```{r}
+# test: IPW with optimal weight
+method_obj = setup_method(name = "IPW",
+                          optimal_weight_flag = T, 
+                          wt = 0,
+                          model_form_piS = "S ~ x1 + x2")
+
+analysis_obj = setup_analysis(trial_status = S, 
+                              treatment = A, 
+                              outcome = Y, 
+                              covariates = X, 
+                              method = method_obj)
+
+run_analysis(analysis_obj, Bootstrap = F)
+```
+
+
+## Test AIPW
+
+Question: 
+
+1. Do we want to include general forms of model specifications in the implementation?
+
+```{r}
+# test: AIPW with 0 weight, should be same as IPW with 0 weight
+method_obj = setup_method(name = "AIPW",
+                          optimal_weight_flag = F, 
+                          wt = 0,
+                          model_form_piS = "S ~ x1 + x2",
+                          model_form_mu0_ext = c("y1 ~ x1 + x2",
+                                             "y2 ~ x1 + x2"))
+
+analysis_obj = setup_analysis(trial_status = S, 
+                              treatment = A, 
+                              outcome = Y, 
+                              covariates = X, 
+                              method = method_obj)
+
+run_analysis(analysis_obj, Bootstrap = F)
+```
+
+
+```{r}
+# test: AIPW with given weight
+method_obj = setup_method(method_name = "AIPW",
+                          optimal_weight_flag = F, 
+                          wt = 0.5,
+                          model_form_piS = "S ~ x1 + x2",
+                          model_form_mu0_ext = c("y1 ~ x1 + x2",
+                                             "y2 ~ x1 + x2",
+                                             "y3 ~ x1 + x2",
+                                             "y4 ~ x1 + x2"))
+
+analysis_obj = setup_analysis(trial_status = S, 
+                              treatment = A, 
+                              outcome = Y, 
+                              covariates = X, 
+                              method = method_obj)
+
+run_analysis(analysis_obj, Bootstrap = F)
+```
+
+```{r}
+# test: AIPW with optimal weight
+method_obj = setup_method(method_name = "AIPW",
+                          optimal_weight_flag = T, 
+                          wt = 0,
+                          model_form_piS = "S ~ x1 + x2",
+                          model_form_mu0_ext = c("y1 ~ x1 + x2",
+                                             "y2 ~ x1 + x2",
+                                             "y3 ~ x1 + x2",
+                                             "y4 ~ x1 + x2"))
+
+analysis_obj = setup_analysis(trial_status = S, 
+                              treatment = A, 
+                              outcome = Y, 
+                              covariates = X, 
+                              method = method_obj)
+
+run_analysis(analysis_obj, Bootstrap = F)
+```
+## Test Bootstrap implementation of the methods
+
+# Analysis part: crossover analysis 
+
+## Simulate a quick dataset
+```{r}
+# X
+set.seed(2025)
+X = simulate_X_mixture(n = 500, p_cat = 0, p_cont = 2, 
+                   cat_level_list = list(),
+                   cat_comb_prob = c(),
+                   cont_para_list = list(list(mean = c(0, 0), sigma = diag(2)))
+                   )
+
+# S
+S = simulate_trial_status(X, model_specs = list(
+  family = "binomial",
+  coef = c(0,1,1)
+))
+
+# A
+A = simulate_trt_assign(X, S, prob = 2/3)
+
+# Y
+model_form1 = "y1 = A*1 + x1*1 + x2*1 + rnorm(n, mean = 0, sd = 0.5)"
+model_form2 = "y2 = A*2 + x1*1 + x2*(-1) + rnorm(n, mean = 0, sd = 0.5)"
+model_form3 = "y3 = A*3 + x1*1 + x2*(-2) + rnorm(n, mean = 0, sd = 0.5)"
+model_form4 = "y4 = A*4 + x1*1 + x2*(-3) + rnorm(n, mean = 0, sd = 0.5)"
+
+Y = simulate_outcome_from_model(T_follow = 4, X = X, A = A, 
+                                     outcome_model_specs = list(
+                                       list(
+                                         model_form = model_form1
+                                       ),
+                                       list(
+                                         model_form = model_form2
+                                       ),
+                                       list(
+                                         model_form = model_form3
+                                       ),
+                                       list(
+                                         model_form = model_form4
+                                       )
+                                     ))
+
+df = data.frame(X, S, A, Y)
+```
+
+
+
+
+
+## Test DID_EC_OR
+
+```{r}
+model_form_mu = c("y1 ~ x1 + x2", 
+                  "y2 ~ x1 + x2",
+                  "y3 ~ x1 + x2",
+                  "y4 ~ x1 + x2")
+res1 = DID_EC_OR(outcome = Y, trial_status = S, treatment = A, covariates = X,
+          long_term_marker = c(F, T, T, T), 
+          model_form_mu0_ext = model_form_mu, 
+          model_form_mu0_rct = model_form_mu, 
+          model_form_mu1_rct = model_form_mu)
+res2 = DID_EC_OR(outcome = Y, trial_status = S, treatment = A, covariates = X,
+          long_term_marker = c(F, F, T, T), 
+          model_form_mu0_ext = model_form_mu, 
+          model_form_mu0_rct = model_form_mu, 
+          model_form_mu1_rct = model_form_mu)
+res3 = DID_EC_OR(outcome = Y, trial_status = S, treatment = A, covariates = X,
+          long_term_marker = c(F, F, F, T), 
+          model_form_mu0_ext = model_form_mu, 
+          model_form_mu0_rct = model_form_mu, 
+          model_form_mu1_rct = model_form_mu)
+res1
+res2 
+res3
+```
+
+## Test DID_EC_IPW
+
+Question here: 
+
+1. In the sample code, why is the propensity scores estimated using a glm model?
+
+2. When estimating the tinting function, there seems to be a small typo in the implementation?
+
+```{r}
+res1 = DID_EC_IPW(outcome = Y, trial_status = S, treatment = A, covariates = X,
+          long_term_marker = c(F, T, T, T), 
+          model_form_piS = "S ~ x1 + x2",
+          model_form_piA = "A ~ x1 + x2")
+
+res2 = DID_EC_IPW(outcome = Y, trial_status = S, treatment = A, covariates = X,
+          long_term_marker = c(F, F, T, T), 
+          model_form_piS = "S ~ x1 + x2",
+          model_form_piA = "A ~ x1 + x2")
+
+res3 = DID_EC_IPW(outcome = Y, trial_status = S, treatment = A, covariates = X,
+          long_term_marker = c(F, F, F, T), 
+          model_form_piS = "S ~ x1 + x2",
+          model_form_piA = "A ~ x1 + x2")
+
+res1
+res2 
+res3
+```
+
+```{r}
+res1 = DID_EC_IPW(outcome = Y, trial_status = S, treatment = A, covariates = X,
+          long_term_marker = c(F, T, T, T), 
+          model_form_piS = "S ~ x1 + x2",
+          model_form_piA = "")
+
+res2 = DID_EC_IPW(outcome = Y, trial_status = S, treatment = A, covariates = X,
+          long_term_marker = c(F, F, T, T), 
+          model_form_piS = "S ~ x1 + x2",
+          model_form_piA = "")
+
+res3 = DID_EC_IPW(outcome = Y, trial_status = S, treatment = A, covariates = X,
+          long_term_marker = c(F, F, F, T), 
+          model_form_piS = "S ~ x1 + x2",
+          model_form_piA = "")
+
+res1
+res2 
+res3
+```
+
+
+
+## Test DID_EC_AIPW
+
+```{r}
+model_form_mu = c("y1 ~ x1 + x2", 
+                  "y2 ~ x1 + x2",
+                  "y3 ~ x1 + x2",
+                  "y4 ~ x1 + x2")
+
+res1 = DID_EC_AIPW(outcome = Y, trial_status = S, treatment = A, covariates = X,
+          long_term_marker = c(F, T, T, T), 
+          model_form_piS = "S ~ x1 + x2",
+          model_form_piA = "A ~ x1 + x2",
+          model_form_mu0_ext = model_form_mu)
+
+res2 = DID_EC_AIPW(outcome = Y, trial_status = S, treatment = A, covariates = X,
+          long_term_marker = c(F, F, T, T), 
+          model_form_piS = "S ~ x1 + x2",
+          model_form_piA = "A ~ x1 + x2",
+          model_form_mu0_ext = model_form_mu)
+
+res3 = DID_EC_AIPW(outcome = Y, trial_status = S, treatment = A, covariates = X,
+          long_term_marker = c(F, F, F, T), 
+          model_form_piS = "S ~ x1 + x2",
+          model_form_piA = "A ~ x1 + x2",
+          model_form_mu0_ext = model_form_mu)
+
+res1
+res2 
+res3
+```
+
+```{r}
+res1 = DID_EC_AIPW(outcome = Y, trial_status = S, treatment = A, covariates = X,
+          long_term_marker = c(F, T, T, T), 
+          model_form_piS = "S ~ x1 + x2",
+          model_form_piA = "",
+          model_form_mu0_ext = model_form_mu)
+
+res2 = DID_EC_AIPW(outcome = Y, trial_status = S, treatment = A, covariates = X,
+          long_term_marker = c(F, F, T, T), 
+          model_form_piS = "S ~ x1 + x2",
+          model_form_piA = "",
+          model_form_mu0_ext = model_form_mu)
+
+res3 = DID_EC_AIPW(outcome = Y, trial_status = S, treatment = A, covariates = X,
+          long_term_marker = c(F, F, F, T), 
+          model_form_piS = "S ~ x1 + x2",
+          model_form_piA = "",
+          model_form_mu0_ext = model_form_mu)
+
+res1
+res2 
+res3
+```
+
+
+
+
+# Implement covariate adjustment for RCT part
+
+# Accommodate different outcome models
+
+# Assumption check
+
+# Experimentation part:
+
+# Create a synthetic data that can be used as an example to implement the methods and Remove true data from pkg
+
+
+# Parallel computing
+
+
+# visualize the real data
+```{r}
+SMA = load("~/rdborrow/data/SMA_data_simulation.rda")
+```
+
+# writing vignettes
+```{r}
+usethis::use_vignette("simulate_data")
+```
+
+# experimenting the bootstrap class
+```{r}
+bootstrap_obj = setup_bootstrap(bootstrap_flag = F, 
+                                replicates = 5e2,
+                                bootstrap_CI_type = "bca")
+print(.bootstrap_obj())
+```
+

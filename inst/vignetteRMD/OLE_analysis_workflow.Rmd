@@ -1,0 +1,139 @@
+---
+title: "OLE Analysis Workflow"
+author: "Lei"
+date: "2024-02-19"
+output: html_document
+---
+
+```{r setup, message=FALSE, warning=FALSE, include=FALSE}
+library(rdborrow)
+```
+
+
+## OLE phase
+
+### 1 DID methods
+
+#### 1.1 IPW
+```{r message=FALSE, warning=FALSE}
+bootstrap_obj = setup_bootstrap(
+  replicates = 2e3, 
+  bootstrap_CI_type = "perc" 
+)
+
+method_DID_obj = setup_method_DID(
+  method_name = "IPW",
+  bootstrap_flag = T,
+  bootstrap_obj = bootstrap_obj,
+  model_form_piS = "S ~ x1 + x2 + x3 + x4 + x5",
+  model_form_piA = "A ~ x1 + x2 + x3 + x4 + x5")
+
+analysis_OLE_obj = setup_analysis_OLE( 
+  data = SyntheticData, 
+  trial_status_col_name = "S", 
+  treatment_col_name = "A", 
+  outcome_col_name = c("y1", "y2", "y3", "y4"), 
+  covariates_col_name = c("x1", "x2", "x3", "x4", "x5"), 
+  T_cross = 2, 
+  method_OLE_obj = method_DID_obj)
+
+res = run_analysis(analysis_OLE_obj)
+```
+
+#### 1.2 AIPW
+```{r message=FALSE, warning=FALSE}
+bootstrap_obj = setup_bootstrap(
+  replicates = 2e3, 
+  bootstrap_CI_type = "perc" 
+)
+
+model_form_mu = c("y1 ~ x1 + x2 + x3 + x4 + x5", 
+                  "y2 ~ x1 + x2 + x3 + x4 + x5",
+                  "y3 ~ x1 + x2 + x3 + x4 + x5",
+                  "y4 ~ x1 + x2 + x3 + x4 + x5")
+
+method_DID_obj = setup_method_DID(
+  method_name = "AIPW",
+  bootstrap_flag = T,
+  bootstrap_obj = bootstrap_obj,
+  model_form_piS = "S ~ x1 + x2 + x3 + x4 + x5",
+  model_form_piA = "A ~ x1 + x2 + x3 + x4 + x5",
+  model_form_mu0_ext = model_form_mu)
+
+analysis_OLE_obj = setup_analysis_OLE( 
+  data = SyntheticData, 
+  trial_status_col_name = "S", 
+  treatment_col_name = "A", 
+  outcome_col_name = c("y1", "y2", "y3", "y4"), 
+  covariates_col_name = c("x1", "x2", "x3", "x4", "x5"), 
+  T_cross = 2,  
+  method_OLE_obj = method_DID_obj) 
+
+res = run_analysis(analysis_OLE_obj) 
+```
+
+
+#### 1.3 OR
+```{r message=FALSE, warning=FALSE}
+bootstrap_obj = setup_bootstrap(
+  replicates = 2e3, 
+  bootstrap_CI_type = "perc" 
+)
+
+model_form_mu = c("y1 ~ x1 + x2 + x3 + x4 + x5", 
+                  "y2 ~ x1 + x2 + x3 + x4 + x5",
+                  "y3 ~ x1 + x2 + x3 + x4 + x5",
+                  "y4 ~ x1 + x2 + x3 + x4 + x5")
+
+method_DID_obj = setup_method_DID(
+  method_name = "OR",
+  bootstrap_flag = T,
+  bootstrap_obj = bootstrap_obj,
+  model_form_mu0_ext = model_form_mu, 
+  model_form_mu0_rct = model_form_mu,
+  model_form_mu1_rct = model_form_mu)
+
+analysis_OLE_obj = setup_analysis_OLE(
+  data = SyntheticData,
+  trial_status_col_name = "S", 
+  treatment_col_name = "A", 
+  outcome_col_name = c("y1", "y2", "y3", "y4"), 
+  covariates_col_name = c("x1", "x2", "x3", "x4", "x5"),
+  T_cross = 2,
+  method_OLE_obj = method_DID_obj)
+
+res = run_analysis(analysis_OLE_obj)
+res
+```
+
+
+
+### 2 SCM method
+```{r message=FALSE, warning=FALSE}
+bootstrap_obj = setup_bootstrap(
+  replicates = 200, 
+  bootstrap_CI_type = "perc" 
+)
+
+method_SCM_obj = setup_method_SCM(
+  method_name = "SCM", 
+  bootstrap_flag = T, 
+  bootstrap_obj = bootstrap_obj, 
+  lambda.min = 0, 
+  lambda.max = 1e-3, 
+  nlambda = 10, 
+  parallel = "multicore", 
+  ncpus = 4) 
+
+analysis_OLE_obj = setup_analysis_OLE(
+  data = SyntheticData, 
+  trial_status_col_name = "S", 
+  treatment_col_name = "A", 
+  outcome_col_name = c("y1", "y2", "y3", "y4"), 
+  covariates_col_name = c("x1", "x2", "x3", "x4", "x5"), 
+  T_cross = 2, 
+  method_OLE_obj = method_SCM_obj) 
+
+run_analysis(analysis_OLE_obj) 
+
+```

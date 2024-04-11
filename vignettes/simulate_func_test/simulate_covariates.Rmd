@@ -1,0 +1,165 @@
+---
+title: "simulate_covariates"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{simulate_covariates}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup, message=FALSE, warning=FALSE, include=FALSE}
+# knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+library(rdborrow)
+set.seed(2023)
+```
+
+
+# Simulating Covariates
+
+## Three ways for generating covariates:
+
+**1. Simulating data from discretized multivariate normal vectors**
+
+Suppose we want to generate a data that has `p` variables, with `p_cat` numbers of categorical variables and `p_cont = p - p_cat` continuous variables. 
+
+- Generate a $p$-dimensional multivariate gaussian vector:
+$$
+X = (X_1,\dots,X_p)^\top \sim N_p(\mu, \Sigma)
+$$
+- Pick \texttt{p_cat} columns and truncate them using quantiles of normal distribution. For example, to discretize $X_1$ into a binary variable with $P(X_1 = 0) = 0.3, P(X_1 = 1) = 0.7$, we choose the $0.7$ upper quantile $q_{0.7}$ and truncate $X_1$:
+$$
+X_1 = 1(X_1 \ge q_{0.7}).
+$$
+
+**2. Simulating data from mixture models**
+
+Another way to simulate $X$ is from gaussian mixture models. Such models have great interpretability. Some continuous variables are distributed according to levels of categorical variables. For example, heights may depend on gender; grading results may depend on subjects; etc. 
+
+To simulate $X$ from mixture gaussian distributions, we proceed as follows:
+- Specify joint distribution of `p_cat` categorical variables:
+$$
+P(X_1 = x_1, \dots, X_{\text{p_cat}} = x_{\text{p_cat}}) = p
+$$
+- For each level combination of categorical variables, generate a joint normal distribution with given mean $\mu$ and covariance $\Sigma$:
+$$
+P(X_{\text{p_cat} + 1}, \dots, X_p \mid X_1 = x_1, \dots, X_{\text{p_cat}} = x_{\text{p_cat}}) = N_{\text{p_cont}}(\mu, \Sigma)
+$$
+
+**3. Simulating data from copula with specified marginal distributions**
+
+Copula provides a powerful way to couple a given set of marginal distributions. In implementation, we follow the following procedure to generate data from a given copula:
+
+- Specify a copula model, say normal or t copula (elliptical copula), Clayton copula (Archimedean copula), Gumbel copula (extreme value copula), etc.  
+
+- Specify the marginal distributions: say normal, t, binomial, etc.
+
+TODO: in certain situation use which
+
+## Implementing three methods under a specific setup
+In the following sections, we consider a running setup to simulate $X$ with:
+
+- $n = 100$ patients;
+- $\text{p_cat} = 2$ categorical covariates; one has two levels and the other has three levels;
+- $\text{p_con} = 2$ continuous covariates.
+
+
+### 1. Simulating data from discretized multivariate normal vectors
+
+We can simulate $X$ from discretized normal distribution. This example can be implemented by the following code chunk:
+```{r echo = TRUE}
+# testing 
+# put some seed
+# sanity check
+test1 = simulate_X_dct_mvnorm(n = 100,   # number of units
+                              p = 4,    # dimension of variables
+                              mu = rep(0, 4),  # population mean of multivariate normal
+                              sig = diag(4),   # population covariance matrix of mv normal
+                              cat_cols = c(1, 2), # which columns are categorical
+                              cat_prob = list(c(0.3, 0.7), c(0.1, 0.3, 0.6)) # the pdf of categorical variables 
+                              )
+head(test1, 10)
+```
+
+
+
+    
+
+### 2. Simulating data from mixture models
+
+Simulate X from a gaussian mixture model:
+```{r}
+# test mixture of continuous and categorical
+X = simulate_X_mixture(n = 100, p_cat = 2, p_cont = 2, 
+                   cat_level_list = list(x1 = c(0,1), x2 = c(0,1,2)),
+                   cat_comb_prob = c(0.1, 0.1, 0.3, 0.3, 0.1, 0.1),
+                   cont_para_list = list(list(mean = c(0, 0), sigma = diag(2)), 
+                                         list(mean = c(0, 1), sigma = diag(2)),
+                                         list(mean = c(0, 2), sigma = diag(2)),
+                                         list(mean = c(1, 0), sigma = diag(2)),
+                                         list(mean = c(1, 1), sigma = diag(2)),
+                                         list(mean = c(1, 2), sigma = diag(2))
+                                         )
+                   )
+head(X, 10)
+```
+
+
+    
+    
+    
+### 3. Simulating data from copula with specified marginal distributions
+
+Explain the parameters
+
+```{r}
+# generate a 4-dimensional normal copula with an AR1 covariance structure
+normal <- copula::normalCopula(param = c(0.8), dim = 4, dispstr = "ar1")
+
+# simulate 100 sample
+X <- simulate_X_copula(n = 100, 
+                       p = 4, 
+                       cp = normal,  # copula
+                       margins = c("binom", "binom", "norm", "norm"),  # specify marginal distributions
+                       paramMargins = list(list(size = 2, prob = 0.5), # specify parameters for marginals
+                                  list(size = 3, prob = 0.5),
+                                  list(mean = 0, sd = 1),
+                                  list(mean = 0, sd = 1))
+                       )
+head(X, 10)
+```
+
+
+## Comparing Pros and Cons of the simulating methods
+
+| Methods              | Pros                                                                                                                                                                                                                                           | Cons                                                                                                                       |
+|----------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------|
+| Discretized Gaussian | - easy to implement; <br>- easy to specify columns and pdf of categorical variables;<br>- can specify correlation structure                                                                                                                    | - continuous variables are limited to normal;<br>- hard to directly quantify the correlation between categorical varialbes |
+| Gaussian Mixture     | - highly interpretable: levels of categorical variables form clusters, each cluster with one distribution (pattern)<br>- very flexible for specifying correlation structure of continuous variables and joint pattern of categorical variables | - might have many parameters to specify with many covariates                                                               |
+| Copula               | - can accommodate many different marginal distributions, such as t, normal, gamma, etc.<br>- instead of specifying Pearson correlation, can specify Spearman correlation                                                                       | - Spearman correlation is not an accurate characterization for correlation among categorical variables                     |
+    
+
+## Additional examples
+
+### Using copula methods to generate non-normal marginals
+
+We can generate a multivariate distribution with non-normal marginals using copula. In the following example, we generate data that couples two normal distributions, one t distribution and one poisson distribution. 
+
+```{r}
+# test simulation from copula
+normal <- copula::normalCopula(param = c(0.8), dim = 4, dispstr = "ar1")
+X <- simulate_X_copula(100, 4, normal, 
+                       margins = c("norm", "t", "norm", "pois"), 
+                       paramMargins = list(list(mean = 2, sd=3),
+                                  list(df = 2),
+                                  list(mean = 0, sd = 1),
+                                  list(lambda = 5))
+                       )
+head(X, 10)
+```
