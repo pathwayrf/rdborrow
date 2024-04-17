@@ -14,7 +14,9 @@ Depends:
     Matrix,
     CVXR,
     gsl,
-    copula
+    copula,
+    future.apply,
+    progress
 Suggests: 
     knitr,
     rmarkdown,

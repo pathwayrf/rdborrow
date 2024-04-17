@@ -12,7 +12,8 @@
 #' @param R 
 #' @param bootstrap_CI_type 
 #' @param alpha 
-#'
+#' 
+#' 
 #' @include EC_IPW_OPT_bootstrap.R 
 #' @return a list containing: tau (effect size), sd.tau (standard deviation), wt (weight)
 #' @export

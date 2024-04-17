@@ -9,7 +9,8 @@ lambdacv(
   long_term_col_name,
   lambda.min = 0,
   lambda.max = 0.1,
-  nlambda = 10
+  nlambda = 10,
+  pb = NULL
 )
 }
 \arguments{

@@ -5,8 +5,12 @@ SCMboot = function(data,
                    treatment_col_name, 
                    covariates_col_name,
                    T_cross,
-                   lambda){
-  #browser()
+                   lambda,
+                   pb){
+  # browser()
+  pb$tick()
+  # print(Sys.getpid())
+  # plan(multicore)
   df_b = data[indices, ]
   
   n10 = sum(df_b$S==1 & df_b$A==0) # number of rct control subjects

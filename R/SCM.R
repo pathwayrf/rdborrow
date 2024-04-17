@@ -41,6 +41,7 @@ SCM = function(data,
                quiet = TRUE){
   
   cat("Running the synthetic control method...\n")
+  plan(multicore)
   
   n10 = sum(data$S==1 & data$A==0) # number of rct control subjects
   n00 = sum(data$S==0) # number of external control subjects
@@ -71,15 +72,28 @@ SCM = function(data,
   # Use LOOCV to find the optimal penalty parameter lambda
   cat("Performing cross validation for tuning parameter selection...\n")
   
+  pb = progress_bar$new(format = "(:spin) [:bar] :percent [Elapsed time: :elapsedfull || Estimated time remaining: :eta]",
+                        total = nlambda, 
+                        clear = FALSE,
+                        show_after = 0)
+  
+  pb$tick(len = 0)   # now it displays the 0% bar
+  
   lambda = lambdacv(ec = X00,
                     long_term_col_name = long_term_col_name,
                     lambda.min = lambda.min,
                     lambda.max = lambda.max,
-                    nlambda = nlambda)
+                    nlambda = nlambda,
+                    pb = pb)
   
   cat("Constructing pseudo controls for internal data...\n")
   # For each rct control subject, find the synthetic control weight and estimate for all time points, return is a list: each element is a list (weight vector and estimated outcome vector)
-  res = lapply(1:n10, subject_SC, X10 = X10, X00 = X00, long_term_col_name = long_term_col_name, lambda = lambda)
+  res = lapply(1:n10, 
+               subject_SC, 
+               X10 = X10, 
+               X00 = X00, 
+               long_term_col_name = long_term_col_name, 
+               lambda = lambda)
   
   # weight matrix: n0*m (combinging by rows)
   wt.mat = do.call(rbind, lapply(res, function(x) as.vector(x[[1]])))
@@ -92,6 +106,7 @@ SCM = function(data,
     dplyr::select(all_of(long_term_col_name)) %>% colMeans()
 
   tau = Y.trt - colMeans(y.est.mat)
+  names(tau) = paste0("tau", (T_cross+1):T_follow)
   
   ####### Use Bootstrap for standard error and confidence intervals
   cat("Performing bootstrap inference with SCM estimates...\n")
@@ -99,13 +114,19 @@ SCM = function(data,
   Group_ID = data %>% group_by(S, A) %>% mutate(group_id = cur_group_id())
   Group_ID = Group_ID$group_id
   
-  boot.ci.type = switch (bootstrap_CI_type,
+  boot.ci.type = switch(bootstrap_CI_type,
                          norm = "normal",
                          bca = "bca",
                          stud = "student",
                          perc = "percent",
                          basic = "basic"
   )
+  
+  pb = progress_bar$new(format = "(:spin) [:bar] :percent [Elapsed time: :elapsedfull || Estimated time remaining: :eta]",
+                        total = R + 1,
+                        clear = FALSE,
+                        show_after = 0)
+  pb$tick(len = 0)   # now it displays the 0% bar
   
   boot.out = boot(data = data,
                    statistic = SCMboot,
@@ -115,6 +136,7 @@ SCM = function(data,
                    covariates_col_name = covariates_col_name,
                    T_cross = T_cross,
                    lambda = lambda,
+                   pb = pb,
                    parallel = parallel,
                    ncpus = ncpus,
                    R = R,
@@ -188,13 +210,17 @@ lambdacv = function(ec,
                     long_term_col_name,
                     lambda.min = 0,
                     lambda.max = 0.1,
-                    nlambda = 10){
-  
+                    nlambda = 10,
+                    pb = NULL){
+  # print(pb)
+  pb$tick(0)
+  # plan(multisession)
   lambda_vals = seq(lambda.min, lambda.max, length.out = nlambda)
-  
+  plan(multicore)
   # leave-one-out cv error for individul external controls
   mse_vals = sapply(lambda_vals,
                     function (lambda) {
+                      pb$tick()
                       res = lapply(1:dim(ec)[2], function(loocv){
                         # subset to only the intersted subject and matching vars
                         x1 = ec[-which(row.names(ec) %in% long_term_col_name), loocv]

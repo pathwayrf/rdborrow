@@ -8,6 +8,8 @@
 #' @import boot
 #' @import Matrix
 #' @import CVXR
+#' @import progress
+#' @import future.apply
 
 
 NULL
