@@ -122,7 +122,7 @@ method_SCM_obj = setup_method_SCM(
   lambda.max = 1e-3, 
   nlambda = 10, 
   parallel = "multicore", 
-  ncpus = 4) 
+  ncpus = 6) 
 
 analysis_OLE_obj = setup_analysis_OLE(
   data = SyntheticData, 

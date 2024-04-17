@@ -2,7 +2,7 @@ Package: rdborrow
 Type: Package
 Title: External Control Borrowing for Rare Disease Simulation and Analysis
 Version: 0.0.1.0
-RoxygenNote: 7.2.3
+RoxygenNote: 7.3.1
 Depends:
     R (>= 2.15),
     checkmate,
