@@ -6,6 +6,8 @@ output: html_document
 ---
 
 ```{r setup, message=FALSE, warning=FALSE, include=FALSE}
+library(devtools)
+install_github("https://github.com/pathwayrf/rdborrow")
 library(rdborrow)
 ```
 
