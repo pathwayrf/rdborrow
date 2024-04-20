@@ -122,7 +122,7 @@ method_SCM_obj = setup_method_SCM(
   lambda.max = 1e-3, 
   nlambda = 10, 
   parallel = "multicore", 
-  ncpus = 6) 
+  ncpus = 4) 
 
 analysis_OLE_obj = setup_analysis_OLE(
   data = SyntheticData, 
@@ -133,14 +133,11 @@ analysis_OLE_obj = setup_analysis_OLE(
   T_cross = 2, 
   method_OLE_obj = method_SCM_obj) 
 
-start_time = Sys.time()
 run_analysis(analysis_OLE_obj) 
-end_time = Sys.time()
-cat("time elapsed: ", round(end_time - start_time, 2))
 ```
 
 
-### 2 SCM method: without parallel computing
+### 3 SCM method: without parallel computing
 ```{r}
 bootstrap_obj = setup_bootstrap(
   replicates = 200, 
@@ -165,9 +162,6 @@ analysis_OLE_obj = setup_analysis_OLE(
   T_cross = 2, 
   method_OLE_obj = method_SCM_obj) 
 
-start_time = Sys.time()
 run_analysis(analysis_OLE_obj) 
-end_time = Sys.time()
-cat("time elapsed: ", round(end_time - start_time, 2))
 
 ```

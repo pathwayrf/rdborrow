@@ -41,7 +41,6 @@ SCM = function(data,
                quiet = TRUE){
   
   cat("Running the synthetic control method...\n")
-  plan(multicore)
   
   n10 = sum(data$S==1 & data$A==0) # number of rct control subjects
   n00 = sum(data$S==0) # number of external control subjects
@@ -128,6 +127,7 @@ SCM = function(data,
                         show_after = 0)
   pb$tick(len = 0)   # now it displays the 0% bar
   
+  start_time = Sys.time()
   boot.out = boot(data = data,
                    statistic = SCMboot,
                    outcome_col_name = outcome_col_name, 
@@ -141,6 +141,8 @@ SCM = function(data,
                    ncpus = ncpus,
                    R = R,
                    strata = Group_ID)
+  end_time = Sys.time()
+  cat("time elapsed for bootstrap: ", round(end_time - start_time, 2))
   
   lower_CI_boot = sapply(1:(T_follow - T_cross), 
                          function(x) {
@@ -214,9 +216,7 @@ lambdacv = function(ec,
                     pb = NULL){
   # print(pb)
   pb$tick(0)
-  # plan(multisession)
   lambda_vals = seq(lambda.min, lambda.max, length.out = nlambda)
-  plan(multicore)
   # leave-one-out cv error for individul external controls
   mse_vals = sapply(lambda_vals,
                     function (lambda) {
