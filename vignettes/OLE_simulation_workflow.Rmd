@@ -5,12 +5,14 @@ date: "2023-11-26"
 output: html_document
 ---
 
+
 ```{r, message=FALSE, warning=FALSE, include=FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
 )
 ```
+
 
 ```{r setup, message=FALSE, warning=FALSE, include=FALSE}
 library(rdborrow)
@@ -186,65 +188,4 @@ simulation_report # Type I error and Power
 ```
 
 The above code generates a report for the simulation results.
-
-
-
-```{r}
-# simulate 300 sample: backup codes
-  
-  
-  
-  
-  
-  
-  normal <- copula::normalCopula(param = c(0.8), dim = 4, dispstr = "ar1")
-  
-  X <- simulate_X_copula(n = 300, 
-                         p = 4, 
-                         cp = normal,  # copula
-                         margins = c("binom", "binom", "binom", "exp"),  # specify marginal distributions
-                         paramMargins = list(list(size = 1, prob = 0.7), # specify parameters for marginals
-                                             list(size = 1, prob = 0.9),
-                                             list(size = 1, prob = 0.3),
-                                             list(rate = 1/10))
-  )
-  
-  X$x4 = round(X$x4) + 1
-  X$x5 = 30 + 10 * X$x1 + (7) * X$x2 + (-1) * X$x3 + (-0.35) * X$x4 + rnorm(300, mean = 0, sd = 10)
-  
-  varnames = c("1", paste0("x", 1:5))
-  
-  # Specify outcome models
-  model_form_x_t1 = setNames(c(10.0, 0.05, -1.5, -1.0, -0.2, -0.1), varnames) # 1.5*A, sigma = 4.0
-  model_form_x_t2 = setNames(c(6.0, 0.5, -0.5, -1.0, -0.3, -0.06), varnames) # 1.8*A, sigma = 4.0
-  model_form_x_t3 = setNames(c(5.0, 1.9, 1.4, -1.3, -0.4, -0.15), varnames) # 1.6*A, sigma = 4.0
-  model_form_x_t4 = setNames(c(1.2, 1.0, 2.0, -0.5, -0.4, -0.10), varnames) # 2.5*A, sigma = 5.0
-
-  outcome_model_specs = list(
-    list(effect = 0, model_form_x = model_form_x_t1, 
-         noise_mean = 0, noise_sd = 4),  # model form for the first time point, given by model_form1
-    list(effect = 0, model_form_x = model_form_x_t2, 
-         noise_mean = 0, noise_sd = 4),  # model form for the second time point, given by model_form2
-    list(effect = 0, model_form_x = model_form_x_t3, 
-         noise_mean = 0, noise_sd = 4),  # model form for the second time point, given by model_form3
-    list(effect = true_effect_long, model_form_x = model_form_x_t4, 
-         noise_mean = 0, noise_sd = 5)  # model form for the second time point, given by model_form2
-  )
-  # piecewise effects; check how Xiner did it
-  
-  S = simulate_trial_status(X, model_specs = list(
-    family = "binomial",
-    coef = c(2.0, 0.15, 0.40, 0.15, -0.1, -0.03)
-  ))
-  
-  X_int = X[S == 1, ]
-  X_ext = X[S == 0, ]
-  
-  Data = simulate_trial(X_int, 
-                        X_ext, 
-                        prob_treated = 2/3, 
-                        OLE_flag = T, 
-                        T_cross = 2,  
-                        outcome_model_specs)
-```
 

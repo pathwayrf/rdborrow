@@ -14,7 +14,7 @@ library(rdborrow)
 ## Primary analysis
 ### 1 load and visualize data
 ```{r}
-# Initialize an empty data list
+# load the simulated dataset
 head(SyntheticData)
 ```
 
@@ -189,4 +189,6 @@ res = run_analysis(analysis_primary_obj)
 ## time dependent way of effects and modeling 
 ```
 
+### 4 Notes
 
+1. When there are missing values in the data, the suggestion we have for now is to preprocess the dataset (such as deletion, imputing, etc.) to obtain a dataset without missingness, then apply the package. For general methodology development regarding missing values, we save it for future research work.  

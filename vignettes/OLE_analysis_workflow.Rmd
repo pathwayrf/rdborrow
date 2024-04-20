@@ -1,14 +1,13 @@
 ---
 title: "OLE Analysis Workflow"
 author: "Lei"
-date: "2024-02-19"
+date: "`r Sys.Date()`"
 output: html_document
 ---
 
 ```{r setup, message=FALSE, warning=FALSE, include=FALSE}
 library(rdborrow)
 ```
-
 
 
 ## OLE phase
@@ -108,9 +107,8 @@ res
 ```
 
 
-
-### 2 SCM method
-```{r message=FALSE, warning=FALSE}
+### 2 SCM method: with parallel computing
+```{r}
 bootstrap_obj = setup_bootstrap(
   replicates = 200, 
   bootstrap_CI_type = "perc" 
@@ -125,6 +123,35 @@ method_SCM_obj = setup_method_SCM(
   nlambda = 10, 
   parallel = "multicore", 
   ncpus = 4) 
+
+analysis_OLE_obj = setup_analysis_OLE(
+  data = SyntheticData, 
+  trial_status_col_name = "S", 
+  treatment_col_name = "A", 
+  outcome_col_name = c("y1", "y2", "y3", "y4"), 
+  covariates_col_name = c("x1", "x2", "x3", "x4", "x5"), 
+  T_cross = 2, 
+  method_OLE_obj = method_SCM_obj) 
+
+run_analysis(analysis_OLE_obj) 
+```
+
+
+### 3 SCM method: without parallel computing
+```{r}
+bootstrap_obj = setup_bootstrap(
+  replicates = 200, 
+  bootstrap_CI_type = "perc" 
+)
+
+method_SCM_obj = setup_method_SCM(
+  method_name = "SCM", 
+  bootstrap_flag = T, 
+  bootstrap_obj = bootstrap_obj, 
+  lambda.min = 0, 
+  lambda.max = 1e-3, 
+  nlambda = 10, 
+  parallel = "no") 
 
 analysis_OLE_obj = setup_analysis_OLE(
   data = SyntheticData, 
