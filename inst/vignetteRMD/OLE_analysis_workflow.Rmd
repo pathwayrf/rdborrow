@@ -16,6 +16,7 @@ library(rdborrow)
 
 #### 1.1 IPW
 ```{r message=FALSE, warning=FALSE}
+set.seed(2024)
 bootstrap_obj = setup_bootstrap(
   replicates = 2e3, 
   bootstrap_CI_type = "perc" 
@@ -41,7 +42,8 @@ res = run_analysis(analysis_OLE_obj)
 ```
 
 #### 1.2 AIPW
-```{r message=FALSE, warning=FALSE}
+```{r}
+set.seed(2024)
 bootstrap_obj = setup_bootstrap(
   replicates = 2e3, 
   bootstrap_CI_type = "perc" 
@@ -70,11 +72,13 @@ analysis_OLE_obj = setup_analysis_OLE(
   method_OLE_obj = method_DID_obj) 
 
 res = run_analysis(analysis_OLE_obj) 
+res
 ```
 
 
 #### 1.3 OR
-```{r message=FALSE, warning=FALSE}
+```{r}
+set.seed(2024)
 bootstrap_obj = setup_bootstrap(
   replicates = 2e3, 
   bootstrap_CI_type = "perc" 
@@ -107,8 +111,10 @@ res
 ```
 
 
-### 2 SCM method: with parallel computing
+### 2 SCM method
+#### 2.1 with parallel computing
 ```{r}
+set.seed(2024)
 bootstrap_obj = setup_bootstrap(
   replicates = 200, 
   bootstrap_CI_type = "perc" 
@@ -137,8 +143,9 @@ run_analysis(analysis_OLE_obj)
 ```
 
 
-### 3 SCM method: without parallel computing
+#### 2.2 without parallel computing
 ```{r}
+set.seed(2024)
 bootstrap_obj = setup_bootstrap(
   replicates = 200, 
   bootstrap_CI_type = "perc" 

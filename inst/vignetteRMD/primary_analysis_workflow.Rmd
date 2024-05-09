@@ -138,7 +138,6 @@ method_weighting_obj = setup_method_weighting(
   optimal_weight_flag = T, 
   bootstrap_flag = T,
   bootstrap_obj = bootstrap_obj,
-  wt = 0,
   model_form_piS = "S ~ x1 + x2 + x3 + x4 + x5")
 
 analysis_primary_obj = setup_analysis_primary(
@@ -167,7 +166,6 @@ bootstrap_obj = setup_bootstrap(
 method_weighting_obj = setup_method_weighting(
   method_name = "AIPW",
   optimal_weight_flag = T, 
-  wt = 0,
   bootstrap_flag = T,
   bootstrap_obj = bootstrap_obj,
   model_form_piS = "S ~ x1 + x2 + x3 + x4 + x5",

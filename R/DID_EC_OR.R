@@ -61,6 +61,7 @@ DID_EC_OR = function(data,
   
   
   # external outcome model
+  print("external outcome modeling:")
   model_list_ext = lapply(1:T_follow, function(x){
     assign(paste0("m.ext", x), lm(as.formula(model_form_mu0_ext[x]), data = filter(df, S==0)))
   })
@@ -68,11 +69,12 @@ DID_EC_OR = function(data,
   # list2env(setNames(model.list, c("m.ext1","m.ext2","m.ext3","m.ext4")), envir = .GlobalEnv)
   
   # rct outcome model
+  print("rct0 outcome modeling:")
   model_list_rct_pc = lapply(1:T_pc, function(x){
     assign(paste0("m.rct", x), lm(as.formula(model_form_mu0_rct[x]), data = filter(df, S==1 & A==0)))
   })
   
-  
+  print("rct1 outcome modeling:")
   model_list_rct_cr = lapply((T_pc+1):T_follow, function(x){
     assign(paste0("m.rct", x), lm(as.formula(model_form_mu1_rct[x]), data = filter(df, S==1 & A==1)))
   })

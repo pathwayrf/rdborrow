@@ -54,21 +54,21 @@ DID_EC_OR_bootstrap = function(data = data,
   
   # external outcome model
   model_list_ext = lapply(1:T_follow, function(x){
+    print(nrow(filter(df, S==0)))
     assign(paste0("m.ext", x), lm(as.formula(model_form_mu0_ext[x]), data = filter(df, S==0)))
   })
-  
   # list2env(setNames(model.list, c("m.ext1","m.ext2","m.ext3","m.ext4")), envir = .GlobalEnv)
   
   # rct outcome model
   model_list_rct_pc = lapply(1:T_pc, function(x){
-#    fit = lm(as.formula(model_form_mu0_rct[x]), data = filter(df, S==1 & A==0))
-#    print(paste(length(fit$coefficients), fit$rank))
+    print(nrow(filter(df, S==1 & A==0)))
     assign(paste0("m.rct", x), lm(as.formula(model_form_mu0_rct[x]), data = filter(df, S==1 & A==0)))
   })
   
   
   
   model_list_rct_cr = lapply((T_pc+1):T_follow, function(x){
+    print(nrow(filter(df, S==1 & A==1)))
     assign(paste0("m.rct", x), lm(as.formula(model_form_mu1_rct[x]), data = filter(df, S==1 & A==1)))
   })
   
@@ -85,6 +85,7 @@ DID_EC_OR_bootstrap = function(data = data,
                       }
                     ))
   colnames(mu_S0A0) = paste0("mu_S0A0_", 1:T_follow)
+  
   
   # S=1
   # first T_pc cols for mu_S1A0 for placebo-controlled period,
