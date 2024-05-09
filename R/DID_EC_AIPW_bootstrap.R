@@ -53,19 +53,19 @@ DID_EC_AIPW_bootstrap = function(data,
   
   # 
   piS = glm(as.formula(model_form_piS), data = df, family = "binomial")
-  piSX = predict(piS, newdata = filter(df), type = "response")
+  suppressWarnings(piSX = predict(piS, newdata = filter(df), type = "response"))
   if (model_form_piA == ""){
     piAX = sum(A)/n
   }else{
     piA = glm(as.formula(model_form_piA), data = filter(df, S == 1), family = "binomial")
-    piAX = predict(piA, newdata = filter(df), type = "response")
+    suppressWarnings(piAX = predict(piA, newdata = filter(df), type = "response"))
   }
   
   # predict Y0 from outcome regression models
   model_list_ext = lapply(1:T_follow, function(x){
     assign(paste0("m.ext", x), lm(as.formula(model_form_mu0_ext[x]), data = filter(df, S==0)))
   })
-  Y0 = data.frame(sapply(1:T_follow, function(x){predict(model_list_ext[[x]], newdata = filter(df))}))
+  suppressWarnings(Y0 = data.frame(sapply(1:T_follow, function(x){predict(model_list_ext[[x]], newdata = filter(df))})))
   colnames(Y0) = paste0("y", 1:T_follow, "_0")
   # for residual
   Yr = Y - Y0 

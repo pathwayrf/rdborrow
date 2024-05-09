@@ -77,28 +77,32 @@ DID_EC_OR_bootstrap = function(data = data,
   
   
   # predicted value for external subjects
+  suppressWarnings(
   mu_S0A0 = do.call(cbind,
                     lapply(
                       1:T_follow,
                       function(x){
+                        
                         predict(model_list_ext[[x]], newdata = filter(df, S==1))
+                        
                       }
-                    ))
+                    )))
   colnames(mu_S0A0) = paste0("mu_S0A0_", 1:T_follow)
-  
+
   
   # S=1
   # first T_pc cols for mu_S1A0 for placebo-controlled period,
   # rest cols for mu_S1A1 for OLE stage
+  suppressWarnings(
   mu_S1 = do.call(cbind,
                   lapply(
                     1:T_follow,
                     function(x){
                       predict(model_list_rct[[x]], newdata = filter(df, S==1))
                     }
-                  ))
+                  )))
   colnames(mu_S1) = paste0("mu_S1_", 1:T_follow)
-  
+
   
   
   avg_S0A0 = colMeans(mu_S0A0)

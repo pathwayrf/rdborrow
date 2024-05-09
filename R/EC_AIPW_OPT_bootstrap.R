@@ -89,20 +89,21 @@ EC_AIPW_OPT_bootstrap = function(data,
     Y0.model.dummy = lapply(model_form_mu0_ext, function(x){lm(as.formula(x), data = filter(df))})
     
     # predict Y0 from outcome regression models
-    Y0 = data.frame(sapply(1:T_follow, function(x){predict(Y0.model[[x]], newdata = df)}))
+    SuppressWarnings(Y0 = data.frame(sapply(1:T_follow, function(x){predict(Y0.model[[x]], newdata = df)})))
     colnames(Y0) = paste0("y", 1:T_follow, "_0")
     # for residual
     Yr = Y - Y0 
     colnames(Yr) = paste0("y", 1:T_follow, "_r")
     
     # estimate ATE
+    SuppressWarnings(
     temp = df %>% cbind(., Y0, Yr) %>%
       mutate(piA = sum(A[S==1])/n,
              piS = sum(S)/(n+m),
              piSX = predict(piS.model, newdata = df, type="response"),
              rx = (piSX/(1-piSX))*((1-piS)/piS)) %>%
       mutate(w11 = piA, w10 = 1 - piA, w00 = rx)
-    
+    )
     ### create outcomes: obs * T
     Ys = as.matrix(Yr)
     
