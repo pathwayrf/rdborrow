@@ -51,6 +51,7 @@ res
 method_weighting_obj = setup_method_weighting(
   method_name = "IPW",
   optimal_weight_flag = T,
+  wt = NaN,
   model_form_piS = "S ~ x1 + x2 + x3 + x4 + x5")
 
 analysis_primary_obj = setup_analysis_primary(
@@ -102,6 +103,7 @@ res = run_analysis(analysis_primary_obj)
 method_weighting_obj = setup_method_weighting(
   method_name = "AIPW",
   optimal_weight_flag = T,
+  wt = NaN,
   model_form_piS = "S ~ x1 + x2 + x3 + x4 + x5",
   model_form_mu0_ext = c("y1 ~ x1 + x2 + x3 + x4 + x5",
                          "y2 ~ x1 + x2 + x3 + x4 + x5"))
@@ -136,6 +138,7 @@ bootstrap_obj = setup_bootstrap(
 method_weighting_obj = setup_method_weighting(
   method_name = "IPW",
   optimal_weight_flag = T, 
+  wt = NaN,
   bootstrap_flag = T,
   bootstrap_obj = bootstrap_obj,
   model_form_piS = "S ~ x1 + x2 + x3 + x4 + x5")
