@@ -35,8 +35,13 @@ EC_IPW_OPT_bootstrap = function(data,
   S = subset(data[indices, ], select = trial_status_col_name)
   A = subset(data[indices, ], select = treatment_col_name)
   X = subset(data[indices, ], select = covariates_col_name)
+  names(S) = "S"
+  names(A) = "A"
+  model_form_piS = unlist(strsplit(model_form_piS, "~"))
+  model_form_piS[1] = "S"
+  model_form_piS = paste0(model_form_piS, collapse = "~")
   
-  df = data[indices, ]
+  df = data.frame(Y, S = S, A = A, X)
   N = nrow(df)
   T_follow = ncol(Y)
   n = sum(df$S) # RCT sample size
@@ -58,8 +63,8 @@ EC_IPW_OPT_bootstrap = function(data,
     Ys = as.matrix(Y[S==1, ])
     
     potential = (temp$A/temp$w11+(1-temp$A)/temp$w10)*Ys
-    mu1 = colSums(potential[temp$A==1, ])/n
-    mu0 = colSums(potential[temp$A==0, ])/n
+    mu1 = colSums(potential[temp$A==1, , drop = F])/n
+    mu0 = colSums(potential[temp$A==0, , drop = F])/n
     
     # print(c(mu1, mu0))
     tau = mu1 - mu0
@@ -83,9 +88,9 @@ EC_IPW_OPT_bootstrap = function(data,
     Ys = as.matrix(Y)
     
     potential = (temp$S*temp$A/temp$w11 + temp$S*(1-temp$A)/temp$w10 + (1-temp$S)*temp$w00)*Ys
-    mu1 = colSums(potential[temp$S==1&temp$A==1,])/sum(temp$S*temp$A/temp$w11)
-    mu10 = colSums(potential[temp$S==1&temp$A==0,])/sum(temp$S*(1-temp$A)/temp$w10)
-    mu00 = colSums(potential[temp$S==0,])/(sum((1-temp$S)*temp$w00))
+    mu1 = colSums(potential[temp$S==1&temp$A==1, , drop = F])/sum(temp$S*temp$A/temp$w11)
+    mu10 = colSums(potential[temp$S==1&temp$A==0, , drop = F])/sum(temp$S*(1-temp$A)/temp$w10)
+    mu00 = colSums(potential[temp$S==0, , drop = F])/(sum((1-temp$S)*temp$w00))
     
     
     

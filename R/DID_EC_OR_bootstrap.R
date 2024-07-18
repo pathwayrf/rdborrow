@@ -41,8 +41,10 @@ DID_EC_OR_bootstrap = function(data = data,
   S = subset(data[indices, ], select = trial_status_col_name)
   A = subset(data[indices, ], select = treatment_col_name)
   X = subset(data[indices, ], select = covariates_col_name)
+  names(S) = "S"
+  names(A) = "A"
   
-  df = data[indices, ]
+  df = data.frame(Y, S = S, A = A, X)
   N = nrow(df)
   T_follow = ncol(Y)
   T_pc = T_cross # placebo-control period

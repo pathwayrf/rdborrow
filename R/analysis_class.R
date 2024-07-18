@@ -52,7 +52,7 @@ setMethod(
   definition = function(object) {
     full_data = data
     print(full_data)
-    cat("Using method: ", object@method)
+    cat("Using method: ", object@method_obj@method_name)
   }
 )
 

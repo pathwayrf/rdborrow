@@ -42,8 +42,18 @@ DID_EC_AIPW_bootstrap = function(data,
   S = subset(data[indices, ], select = trial_status_col_name)
   A = subset(data[indices, ], select = treatment_col_name)
   X = subset(data[indices, ], select = covariates_col_name)
+  names(S) = "S"
+  names(A) = "A"
   
-  df = data[indices, ]
+  model_form_piS = unlist(strsplit(model_form_piS, "~"))
+  model_form_piS[1] = "S"
+  model_form_piS = paste0(model_form_piS, collapse = "~")
+  
+  model_form_piA = unlist(strsplit(model_form_piA, "~"))
+  model_form_piA[1] = "A"
+  model_form_piA = paste0(model_form_piA, collapse = "~")
+  
+  df = data.frame(Y, S = S, A = A, X)
   N = nrow(df)
   T_follow = ncol(Y)
   T_pc = T_cross# placebo-control period

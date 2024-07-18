@@ -42,26 +42,30 @@ SCM = function(data,
   
   cat("Running the synthetic control method...\n")
   
-  n10 = sum(data$S==1 & data$A==0) # number of rct control subjects
-  n00 = sum(data$S==0) # number of external control subjects
-  T_follow = length(outcome_col_name)
-  
   Y = subset(data, select = outcome_col_name)
   S = subset(data, select = trial_status_col_name)
   A = subset(data, select = treatment_col_name)
   X = subset(data, select = covariates_col_name)
+  names(S) = "S"
+  names(A) = "A"
+  
+  df = data.frame(Y, S = S, A = A, X)
+  
+  n10 = sum(df$S==1 & df$A==0) # number of rct control subjects
+  n00 = sum(df$S==0) # number of external control subjects
+  T_follow = length(outcome_col_name)
   
   # standardize numeric vars
   # columns_to_standardize = c("SMN2_Copy_Number", "Age_Enrollment", "Y0")
-  # data[columns_to_standardize] = lapply(data[columns_to_standardize], scale)
+  # df[columns_to_standardize] = lapply(df[columns_to_standardize], scale)
   
   # extract long term column names
   short_term_col_name = outcome_col_name[1:T_cross]
   long_term_col_name = outcome_col_name[(T_cross + 1):length(outcome_col_name)]
   
-  # create data matrices: attributes by row and subject by column
-  X10 = t(as.matrix(data %>% filter(S==1 & A==0) %>% dplyr::select(all_of(c(covariates_col_name, outcome_col_name)))))
-  X00 = t(as.matrix(data %>% filter(S==0) %>% dplyr::select(all_of(c(covariates_col_name, outcome_col_name)))))
+  # create df matrices: attributes by row and subject by column
+  X10 = t(as.matrix(df %>% filter(S==1 & A==0) %>% dplyr::select(all_of(c(covariates_col_name, outcome_col_name)))))
+  X00 = t(as.matrix(df %>% filter(S==0) %>% dplyr::select(all_of(c(covariates_col_name, outcome_col_name)))))
   
   # remove colnames of X10 and X00
   colnames(X00) = NULL
@@ -101,7 +105,7 @@ SCM = function(data,
   y.est.mat = do.call(rbind, lapply(res, function(x) as.vector(x[[2]])))
   
   # Aggregate group level synthetic control estiamte
-  Y.trt = data %>% filter(S == 1 & A == 1) %>% 
+  Y.trt = df %>% filter(S == 1 & A == 1) %>% 
     dplyr::select(all_of(long_term_col_name)) %>% colMeans()
 
   tau = Y.trt - colMeans(y.est.mat)
@@ -110,7 +114,7 @@ SCM = function(data,
   ####### Use Bootstrap for standard error and confidence intervals
   cat("Performing bootstrap inference with SCM estimates...\n")
   
-  Group_ID = data %>% group_by(S, A) %>% mutate(group_id = cur_group_id())
+  Group_ID = df %>% group_by(S, A) %>% mutate(group_id = cur_group_id())
   Group_ID = Group_ID$group_id
   
   boot.ci.type = switch(bootstrap_CI_type,
@@ -128,7 +132,7 @@ SCM = function(data,
   pb$tick(len = 0)   # now it displays the 0% bar
   
   start_time = Sys.time()
-  boot.out = boot(data = data,
+  boot.out = boot(data = df,
                    statistic = SCMboot,
                    outcome_col_name = outcome_col_name, 
                    trial_status_col_name = trial_status_col_name, 

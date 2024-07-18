@@ -20,6 +20,8 @@ SCMboot = function(data,
   S = subset(df_b, select = trial_status_col_name)
   A = subset(df_b, select = treatment_col_name)
   X = subset(df_b, select = covariates_col_name)
+  names(S) = "S"
+  names(A) = "A"
   
   # standardize numeric vars
   # columns_to_standardize = c("SMN2_Copy_Number", "Age_Enrollment", "Y0")

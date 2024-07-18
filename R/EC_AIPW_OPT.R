@@ -48,8 +48,13 @@ EC_AIPW_OPT = function(data,
   S = subset(data, select = trial_status_col_name)
   A = subset(data, select = treatment_col_name)
   X = subset(data, select = covariates_col_name)
+  names(S) = "S"
+  names(A) = "A"
+  model_form_piS = unlist(strsplit(model_form_piS, "~"))
+  model_form_piS[1] = "S"
+  model_form_piS = paste0(model_form_piS, collapse = "~")
   
-  df = data
+  df = data.frame(Y, S = S, A = A, X)
   N = nrow(df)
   T_follow = ncol(Y)
   n = sum(df$S) # RCT sample size

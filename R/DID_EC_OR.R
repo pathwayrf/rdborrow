@@ -49,8 +49,10 @@ DID_EC_OR = function(data,
   S = subset(data, select = trial_status_col_name)
   A = subset(data, select = treatment_col_name)
   X = subset(data, select = covariates_col_name)
+  names(S) = "S"
+  names(A) = "A"
   
-  df = data
+  df = data.frame(Y, S = S, A = A, X)
   N = nrow(df)
   T_follow = ncol(Y)
   T_pc = T_cross # placebo-control period
