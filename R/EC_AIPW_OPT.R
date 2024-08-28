@@ -137,7 +137,7 @@ EC_AIPW_OPT = function(data,
     A11 = diag(rep(-1, T_follow), nrow = T_follow)
     A22 = diag(rep(-1, T_follow), nrow = T_follow)
     A33 = diag(rep(-mean((1-temp$S)*temp$w00/(1-temp$piS)), T_follow), nrow = T_follow)
-    A34 = t((as.vector((1-temp$S)*temp$`piSX`/(temp$`piS`*(1-temp$`piSX`)))*(Ys-mu00)))%*%model.matrix(piS.model)/(n+m)
+    A34 = t((as.vector((1-temp$S)*temp$`piSX`/(temp$`piS`*(1-temp$`piSX`)))*sweep(Ys, 2, mu00)))%*%model.matrix(piS.model)/(n+m)
     piS.beta = t(model.matrix(piS.model))%*%diag(-temp$`piSX`*(1-temp$`piSX`))%*%model.matrix(piS.model)/(n+m)
     A44 = piS.beta
     
@@ -190,9 +190,9 @@ EC_AIPW_OPT = function(data,
     A = cbind(A.left, A.right)
     
     ## meat
-    phi1 = temp$S*temp$A*(Ys-mu1)/temp$`piA`/temp$piS    # influence from rct treated
-    phi2 = temp$S*(1-temp$A)*(Ys-mu10)/(1-temp$`piA`)/temp$piS    # influence from rct control
-    phi3 = (1-temp$S)*(Ys-mu00)*temp$w00/(1-temp$piS)
+    phi1 = temp$S*temp$A*sweep(Ys, 2, mu1)/temp$`piA`/temp$piS    # influence from rct treated
+    phi2 = temp$S*(1-temp$A)*sweep(Ys, 2, mu10)/(1-temp$`piA`)/temp$piS    # influence from rct control
+    phi3 = (1-temp$S)*sweep(Ys, 2, mu00)*temp$w00/(1-temp$piS)
     phi.piS = (temp$S-temp$`piSX`)*model.matrix(piS.model)
     phi.Y0 = do.call(cbind, 
                      args = lapply(1:T_follow, function(x){

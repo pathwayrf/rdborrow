@@ -73,8 +73,8 @@ EC_AIPW_OPT_bootstrap = function(data,
     tau = mu1 - mu0
     
     # asymptotic variance of ATE
-    phi1 = temp$A*(Ys-mu1)/temp$`piA`  # influence from rct treated
-    phi0 = (1-temp$A)*(Ys-mu0)/(1-temp$`piA`)  # influence from rct control
+    phi1 = temp$A*sweep(Ys, 2, mu1)/temp$`piA`  # influence from rct treated
+    phi0 = (1-temp$A)*sweep(Ys, 2, mu0)/(1-temp$`piA`)  # influence from rct control
     ## big Phi should be n by T
     Phi = cbind(phi1, phi0)
     B = (t(Phi) %*% Phi)/n
